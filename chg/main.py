@@ -1,10 +1,12 @@
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+import os
 
 from chg.platform import git as git_platform
 from chg.chunker import git as git_chunker
 from chg.annotator.template_annotator import FixedListAnnotator
 from chg.dialogue import basic_dialogue
 from chg.db import database
+import chg.defaults
 
 from chg.ui import (
     simple_cli_ui,
@@ -39,6 +41,9 @@ def annotate(chunker, store, annotator, ui, platform):
                 msg = ui.prompt("Commit message: ")
         else:
             msg = ui.prompt("Commit message: ")
+            # if user writes commit message, we should take that
+            # as more info for db
+            answered.append(("Commit message", msg))
 
         if not DEBUG:
             chunker.commit(msg)
@@ -49,21 +54,40 @@ def annotate(chunker, store, annotator, ui, platform):
         store.record_dialogue((chunk_id, answered))
 
 
-def ask():
+def ask(ui, store, search, k):
+    try:
+        while True:
+            user_question = ui.prompt("Question:")
+            results = search.search(store, user_question, k=k)
+            for r in results:
+                ui.display_search_result(r)
+    except KeyboardInterrupt:
+        return
+
+
+def index_existing():
+    # pass
+    # take existing git log
+    # take diff for each as chunk
+    # take commit message as dialogue, answer: "what is this commit about?"
     pass
 
 
 def get_chunker(args):
     if args.chunker == "single":
-        return git_chunker.SingleChunk(args.project)
+        return git_chunker.SingleChunk()
     elif args.chunker == "file":
-        return git_chunker.FileBasedChunker(args.project)
+        return git_chunker.FileBasedChunker()
     else:
         raise ValueError("Unknown chunker:", args.chunker)
 
 
 def get_store(args):
-    return database.Database(args.store)
+    if not os.path.exists(chg.defaults.CHG_PROJ_DIR):
+        print("Creating folder for chg at", chg.defaults.CHG_PROJ_DIR)
+        os.makedirs(chg.defaults.CHG_PROJ_DIR)
+    db_path = chg.defaults.CHG_PROJ_DB_PATH
+    return database.Database(db_path)
 
 
 def get_annotator(args):
@@ -103,20 +127,6 @@ def get_args():
         default="cli"
     )
     parser.add_argument(
-        "-p",
-        "--project",
-        type=str,
-        help="Path to project with changes",
-        default=None,
-    )
-    parser.add_argument(
-        "-s",
-        "--store",
-        type=str,
-        help="Path to database with changes",
-        default=None,
-    )
-    parser.add_argument(
         "-a",
         "--annotator",
         type=str,
@@ -133,7 +143,7 @@ def get_args():
     return parser.parse_args()
 
 
-def main(stdscr=None):
+def main():
     args = get_args()
 
     if args.debug:
