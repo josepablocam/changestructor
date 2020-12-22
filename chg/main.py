@@ -5,7 +5,8 @@ from chg.platform import git as git_platform
 from chg.chunker import git as git_chunker
 from chg.annotator.template_annotator import FixedListAnnotator
 from chg.dialogue import basic_dialogue
-from chg.db import database
+from chg.db.database import get_store
+from chg.search.embedded_search import EmbeddedSearcher
 import chg.defaults
 
 from chg.ui import (
@@ -54,11 +55,11 @@ def annotate(chunker, store, annotator, ui, platform):
         store.record_dialogue((chunk_id, answered))
 
 
-def ask(ui, store, search, k):
+def ask(ui, searcher, k=5):
     try:
         while True:
             user_question = ui.prompt("Question:")
-            results = search.search(store, user_question, k=k)
+            results = searcher.search(user_question, k=k)
             for r in results:
                 ui.display_search_result(r)
     except KeyboardInterrupt:
@@ -82,14 +83,6 @@ def get_chunker(args):
         raise ValueError("Unknown chunker:", args.chunker)
 
 
-def get_store(args):
-    if not os.path.exists(chg.defaults.CHG_PROJ_DIR):
-        print("Creating folder for chg at", chg.defaults.CHG_PROJ_DIR)
-        os.makedirs(chg.defaults.CHG_PROJ_DIR)
-    db_path = chg.defaults.CHG_PROJ_DB_PATH
-    return database.Database(db_path)
-
-
 def get_annotator(args):
     if args.annotator == "fixed":
         return FixedListAnnotator(basic_dialogue.QUESTIONS)
@@ -104,12 +97,26 @@ def get_ui(args):
         raise ValueError("Unknown ui:", args.ui)
 
 
+def get_searcher(args):
+    searcher = EmbeddedSearcher(
+        chg.defaults.CHG_PROJ_FASTTEXT,
+        chg.defaults.CHG_PROJ_FAISS,
+    )
+    return searcher
+
+
 def get_args():
     parser = ArgumentParser(
         description="chgstructor: dialogue-based change-set annotation",
         formatter_class=ArgumentDefaultsHelpFormatter
     )
-    # annotate only for now
+    # TODO: write proper subparses
+    parser.add_argument(
+        "action",
+        choices=["annotate", "ask"],
+        help="chgstructor mode",
+        required=True,
+    )
     parser.add_argument(
         "-c",
         "--chunker",
@@ -143,6 +150,21 @@ def get_args():
     return parser.parse_args()
 
 
+def main_annotate(args):
+    chunker = get_chunker(args)
+    store = get_store(args)
+    annotator = get_annotator(args)
+    ui = get_ui(args)
+    # only supporting git for now...
+    annotate(chunker, store, annotator, ui, platform=git_platform)
+
+
+def main_ask(args):
+    searcher = get_searcher(args)
+    ui = get_ui()
+    ask(ui, searcher, k=5)
+
+
 def main():
     args = get_args()
 
@@ -150,14 +172,12 @@ def main():
         global DEBUG
         DEBUG = True
 
-    chunker = get_chunker(args)
-    store = get_store(args)
-    annotator = get_annotator(args)
-    ui = get_ui(args)
-    global UI
-    UI = ui
-    # only supporting git for now...
-    annotate(chunker, store, annotator, ui, platform=git_platform)
+    if args.action == "annotate":
+        main_annotate(args)
+    elif args.action == "ask":
+        main_ask(args)
+    else:
+        raise Exception("Invalid action", args.action)
 
 
 if __name__ == "__main__":

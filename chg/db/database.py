@@ -1,4 +1,7 @@
+import os
 import sqlite3
+
+import chg.defaults
 
 
 def create_chunks_table(conn):
@@ -68,6 +71,17 @@ def db_to_text(conn):
     return results
 
 
+def get_dialogue_by_ids(conn, ids):
+    stmt = """
+    SELECT * from Dialogue WHERE id in VALUES({})
+    """.format(", ".join(str(i) for i in ids))
+    cursor = conn.cursor()
+    cursor.execute(stmt)
+    results = cursor.fetchall()
+    cursor.close()
+    return results
+
+
 class Database(object):
     def __init__(self, db_path):
         self.db_path = db_path
@@ -96,3 +110,16 @@ class Database(object):
             )
             ids.append(qa_id)
         return ids
+
+    def get_dialogue_by_ids(self, ids):
+        return get_dialogue_by_ids(self.conn, ids)
+
+
+def get_store(db_path=None):
+    if db_path is None:
+        db_path = chg.defaults.CHG_PROJ_DB_PATH
+    db_dir = os.dirname(db_path)
+    if not os.path.exists(db_dir):
+        print("Creating folder for chg database at", db_dir)
+        os.makedirs(db_dir)
+    return Database(db_path)
