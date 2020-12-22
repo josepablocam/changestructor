@@ -1,4 +1,5 @@
 import subprocess
+import json
 
 
 def diff(path=None):
@@ -6,6 +7,18 @@ def diff(path=None):
     cmd = ["git", "diff", "--cached", "--color=always"]
     if path is not None:
         cmd.append(path)
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    output, _ = proc.communicate()
+    output = output.decode().strip()
+    if len(output) == 0:
+        return None
+    else:
+        return output
+
+
+def diff_from_to(hash1, hash2):
+    # after user has run git add
+    cmd = ["git", "diff", "--color=always", hash1, hash2]
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     output, _ = proc.communicate()
     output = output.decode().strip()
@@ -46,3 +59,18 @@ def hash():
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     output, _ = proc.communicate()
     return output
+
+
+def log():
+    # parse logs (just hash and message)
+    cmd = """
+    git log \
+  --pretty=format:'{^^^^date^^^^:^^^^%ci^^^^,^^^^abbreviated_commit^^^^:^^^^%h^^^^,^^^^subject^^^^:^^^^%s^^^^,^^^^body^^^^:^^^^%b^^^^}' \
+  | sed 's/"/\\"/g' \
+  | sed 's/\^^^^/"/g' \
+  | jq -s '.'
+    """
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
+    output, _ = proc.communicate()
+    output = output.decode().strip()
+    return json.loads(output)
