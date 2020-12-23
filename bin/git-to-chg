@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+source "${CHG_ROOT_DIR}/chg/scripts/defaults.sh"
+export PATH=${PATH}:${CHG_RESOURCES}
+source "$(dirname ${CONDA_EXE})/../etc/profile.d/conda.sh"
+conda activate "${CHG_CONDA_ENV}"
+
+python3 -m chg.db.git_log_to_db $@
