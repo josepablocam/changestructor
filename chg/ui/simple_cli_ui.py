@@ -11,6 +11,9 @@ class SimpleCLIUI(object):
     def display_question(self, question):
         print("Question: {}".format(question))
 
+    def display_search_result(self, result):
+        print(result)
+
     def prompt(self, msg, options=None):
         if options is not None:
             msg = "{} [Options={}]".format(msg, options)

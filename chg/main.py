@@ -58,20 +58,12 @@ def annotate(chunker, store, annotator, ui, platform):
 def ask(ui, searcher, k=5):
     try:
         while True:
-            user_question = ui.prompt("Question:")
+            user_question = ui.prompt("Question: ")
             results = searcher.search(user_question, k=k)
             for r in results:
                 ui.display_search_result(r)
     except KeyboardInterrupt:
         return
-
-
-def index_existing():
-    # pass
-    # take existing git log
-    # take diff for each as chunk
-    # take commit message as dialogue, answer: "what is this commit about?"
-    pass
 
 
 def get_chunker(args):
@@ -115,7 +107,6 @@ def get_args():
         "action",
         choices=["annotate", "ask"],
         help="chgstructor mode",
-        required=True,
     )
     parser.add_argument(
         "-c",
@@ -152,7 +143,7 @@ def get_args():
 
 def main_annotate(args):
     chunker = get_chunker(args)
-    store = get_store(args)
+    store = get_store()
     annotator = get_annotator(args)
     ui = get_ui(args)
     # only supporting git for now...
@@ -161,7 +152,7 @@ def main_annotate(args):
 
 def main_ask(args):
     searcher = get_searcher(args)
-    ui = get_ui()
+    ui = get_ui(args)
     ask(ui, searcher, k=5)
 
 

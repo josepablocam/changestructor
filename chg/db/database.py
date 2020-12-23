@@ -73,7 +73,7 @@ def db_to_text(conn):
 
 def get_dialogue_by_ids(conn, ids):
     stmt = """
-    SELECT * from Dialogue WHERE id in VALUES({})
+    SELECT * from Dialogue WHERE id in ({})
     """.format(", ".join(str(i) for i in ids))
     cursor = conn.cursor()
     cursor.execute(stmt)
@@ -93,9 +93,16 @@ class Database(object):
     def _connect(self):
         self.conn = sqlite3.connect(self.db_path)
 
-    def _create_tables(self, ):
+    def _create_tables(self):
         create_chunks_table(self.conn)
         create_dialogue_table(self.conn)
+
+    def run_query(self, stmt):
+        cursor = self.conn.cursor()
+        cursor.execute(stmt)
+        results = cursor.fetchall()
+        cursor.close()
+        return results
 
     def record_chunk(self, data):
         # prehash, chunk, posthash = data
@@ -118,7 +125,7 @@ class Database(object):
 def get_store(db_path=None):
     if db_path is None:
         db_path = chg.defaults.CHG_PROJ_DB_PATH
-    db_dir = os.dirname(db_path)
+    db_dir = os.path.dirname(db_path)
     if not os.path.exists(db_dir):
         print("Creating folder for chg database at", db_dir)
         os.makedirs(db_dir)

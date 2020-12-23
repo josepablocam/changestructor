@@ -1,7 +1,7 @@
 import setuptools
 
 setuptools.setup(
-    name="chg",  # Replace with your own username
+    name="chg",
     version="0.0.1",
     author="Example Author",
     author_email="author@example.com",
@@ -12,12 +12,12 @@ setuptools.setup(
     scripts=[
         "bin/chg",
         "bin/git-to-chg",
-        "chg/scripts/build_semantic_db.sh",
+        "bin/chg-to-index",
     ],
-    classifiers=[
-        "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: MIT License",
-        "Operating System :: OS Independent",
-    ],
+    # classifiers=[
+    #     "Programming Language :: Python :: 3",
+    #     "License :: OSI Approved :: MIT License",
+    #     "Operating System :: OS Independent",
+    # ],
     python_requires='>=3.7',
 )

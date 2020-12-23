@@ -33,19 +33,12 @@ def get_args():
         description="Record all git commits to chgstructor database",
         formatter_class=ArgumentDefaultsHelpFormatter
     )
-    parser.add_argument(
-        "-s",
-        "--store",
-        type=str,
-        help="Path to database with changes",
-        default=None,
-    )
     return parser.parse_args()
 
 
 def main():
-    args = get_args()
-    store = get_store(args)
+    _ = get_args()
+    store = get_store()
     log_to_db(store)
 
 

@@ -31,13 +31,18 @@ pip install tqdm
 # we'll use this to create embeddings for our classes
 wget https://github.com/facebookresearch/fastText/archive/v0.9.2.zip
 unzip v0.9.2.zip
-mv fastText-0.9.2 "${CHG_RESOURCES}/fasttext"
-pushd "${CHG_RESOURCES}/fasttext"
+mv fastText-0.9.2 "${CHG_RESOURCES}/fasttext-install"
+pushd "${CHG_RESOURCES}/fasttext-install"
 make
 pip install .
 popd
-export PATH=${PATH}:"${CHG_RESOURCES}/fasttext"
+ln -s "${CHG_RESOURCES}/fasttext-install/fasttext" "${CHG_RESOURCES}/fasttext"
+export PATH=${PATH}:"${CHG_RESOURCES}"
 
 
 # install faiss
 conda install faiss-cpu -c pytorch
+
+
+# install changestructor
+pip install -e .
