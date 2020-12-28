@@ -82,7 +82,7 @@ def ask(ui, searcher, k=5):
             results = searcher.search(user_question, k=k)
             for r in results:
                 ui.display_search_result(r)
-    except KeyboardInterrupt:
+    except (EOFError, KeyboardInterrupt):
         return
 
 
@@ -123,20 +123,7 @@ def get_args():
         description="chgstructor: dialogue-based change-set annotation",
         formatter_class=ArgumentDefaultsHelpFormatter
     )
-    # TODO: write proper subparses
-    parser.add_argument(
-        "action",
-        choices=["annotate", "ask"],
-        help="chgstructor mode",
-    )
-    parser.add_argument(
-        "-c",
-        "--chunker",
-        type=str,
-        choices=["single", "file"],
-        help="Chunking approach",
-        default="file"
-    )
+    # shared across actions
     parser.add_argument(
         "-u",
         "--ui",
@@ -146,6 +133,24 @@ def get_args():
         default="cli"
     )
     parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Set debug flag",
+    )
+
+    subparsers = parser.add_subparsers(help="chg actions")
+
+    annotate_parser = subparsers.add_parser("annotate")
+    annotate_parser.set_defaults(action="annotate")
+    annotate_parser.add_argument(
+        "-c",
+        "--chunker",
+        type=str,
+        choices=["single", "file"],
+        help="Chunking approach",
+        default="file"
+    )
+    annotate_parser.add_argument(
         "-a",
         "--annotator",
         type=str,
@@ -153,11 +158,9 @@ def get_args():
         choices=["fixed"],
         default="fixed"
     )
-    parser.add_argument(
-        "--debug",
-        action="store_true",
-        help="Set debug flag",
-    )
+
+    ask_parser = subparsers.add_parser("ask")
+    ask_parser.set_defaults(action="ask", debug=False)
 
     return parser.parse_args()
 
