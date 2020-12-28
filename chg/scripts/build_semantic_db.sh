@@ -11,9 +11,10 @@ source $(dirname ${CONDA_EXE})/../etc/profile.d/conda.sh
 conda activate ${CHG_CONDA_ENV}
 
 # make sure we're at the top level of the git dir
-CHG_PROJ_DIR="$(git rev-parse --show-toplevel)/${CHG_PROJ_DIR}"
+CHG_PROJ_DIR="$(git rev-parse --show-toplevel)/$(python -m chg.defaults CHG_PROJ_DIR)"
 mkdir -p ${CHG_PROJ_DIR}
 
+# # per-project paths
 CHG_PROJ_DB_TEXT="${CHG_PROJ_DIR}/db.txt"
 CHG_PROJ_DB_VECTORS="${CHG_PROJ_DIR}/db.vec"
 CHG_PROJ_EMBEDDING_MODEL="${CHG_PROJ_DIR}/embeddings"

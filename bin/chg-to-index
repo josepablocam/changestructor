@@ -1,7 +1,14 @@
 #!/usr/bin/env bash
+export CHG_ROOT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../" >/dev/null 2>&1 && pwd )"
 source "${CHG_ROOT_DIR}/chg/scripts/defaults.sh"
 export PATH=${PATH}:${CHG_RESOURCES}
 source "$(dirname ${CONDA_EXE})/../etc/profile.d/conda.sh"
 conda activate "${CHG_CONDA_ENV}"
 
+if [ $# -gt 0 ]
+then
+      echo "Usage: chg-to-index"
+      echo "Create indexed semantic db for dialogue"
+      exit 0
+fi
 bash "${CHG_ROOT_DIR}/chg/scripts/build_semantic_db.sh"

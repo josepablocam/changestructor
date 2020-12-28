@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
+export CHG_ROOT_DIR=$(pwd)
 source chg/scripts/defaults.sh
-
 mkdir -p ${CHG_RESOURCES}
 
 # Install conda if not available
@@ -46,3 +46,8 @@ conda install faiss-cpu -c pytorch
 
 # install changestructor
 pip install -e .
+
+
+chmod +x bin/chg
+chmod +x chg-to-index
+chmod +x git-to-chg
