@@ -10,11 +10,14 @@ export PATH=${PATH}:${CHG_RESOURCES}
 source $(dirname ${CONDA_EXE})/../etc/profile.d/conda.sh
 conda activate ${CHG_CONDA_ENV}
 
+# make sure we're at the top level of the git dir
+CHG_PROJ_DIR="$(git rev-parse --show-toplevel)/${CHG_PROJ_DIR}"
+mkdir -p ${CHG_PROJ_DIR}
 
-export CHG_PROJ_DB_TEXT="${CHG_PROJ_DIR}/db.txt"
-export CHG_PROJ_DB_VECTORS="${CHG_PROJ_DIR}/db.vec"
-export CHG_PROJ_EMBEDDING_MODEL="${CHG_PROJ_DIR}/embeddings"
-export CHG_PROJ_FAISS="${CHG_PROJ_DIR}/faiss.db"
+CHG_PROJ_DB_TEXT="${CHG_PROJ_DIR}/db.txt"
+CHG_PROJ_DB_VECTORS="${CHG_PROJ_DIR}/db.vec"
+CHG_PROJ_EMBEDDING_MODEL="${CHG_PROJ_DIR}/embeddings"
+CHG_PROJ_FAISS="${CHG_PROJ_DIR}/faiss.db"
 NDIM=150
 
 # Chg database to "text"

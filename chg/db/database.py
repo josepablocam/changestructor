@@ -2,6 +2,7 @@ import os
 import sqlite3
 
 import chg.defaults
+from chg.platform import git
 
 
 def create_chunks_table(conn):
@@ -124,7 +125,9 @@ class Database(object):
 
 def get_store(db_path=None):
     if db_path is None:
-        db_path = chg.defaults.CHG_PROJ_DB_PATH
+        # get root of git project
+        proj_root = git.root()
+        db_path = os.path.join(proj_root, chg.defaults.CHG_PROJ_DB_PATH)
     db_dir = os.path.dirname(db_path)
     if not os.path.exists(db_dir):
         print("Creating folder for chg database at", db_dir)

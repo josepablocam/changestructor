@@ -74,3 +74,11 @@ def log():
     output, _ = proc.communicate()
     output = output.decode().strip()
     return json.loads(output)
+
+
+def root():
+    cmd = ["git", "rev-parse", "--show-toplevel"]
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    output, _ = proc.communicate()
+    output = output.decode().strip()
+    return output

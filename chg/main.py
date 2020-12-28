@@ -18,23 +18,38 @@ DEBUG = False
 
 def annotate(chunker, store, annotator, ui, platform):
     for chunk in chunker.get_chunks():
+        # show chunk to user initially
         ui.display_chunk(chunk)
+        # annotater gets access to chunk
+        # so can produce relevant questions
         annotator.consume_chunk(chunk)
 
         answered = []
         while not annotator.done():
             question = annotator.ask()
+            # annotator may want to update the display
+            # for the chunk based on the question
+            # (e.g. may want to highlight a portion of the chunk)
             chunk_update = annotator.get_chunk_update()
             ui.display_chunk_update(chunk_update)
+
             ui.display_question(question)
 
             answer = ui.prompt("")
+            # annotator can update its internal state
+            # based on answer (e.g. new question based on previous answer)
             annotator.consume_answer(answer)
             answered.append((question, answer))
 
-        # (current hash, chunk)
+        # changes induced by the chunk (i.e. this diff)
+        # are committed directly by `chg` (i.e. the user
+        # no longer needs to interact with `git commit`)
         old_hash = platform.hash()
+        # some annotators may want to generate the commit message
+        # directly from the user's dialogue
+        # rather than prompt user for explicit commit message
         if annotator.has_commit_message():
+            # but user can always override
             generate_msg = ui.prompt("Generate commit msg?", ["Y", "n"])
             if generate_msg == "Y":
                 msg = annotator.get_commit_message()
@@ -46,11 +61,16 @@ def annotate(chunker, store, annotator, ui, platform):
             # as more info for db
             answered.append(("Commit message", msg))
 
+        # just for dev
         if not DEBUG:
             chunker.commit(msg)
 
         new_hash = platform.hash()
-
+        # info is only stored in the database after the commit
+        # has taken place
+        # TODO: if the user exits or crashes before this
+        # the file system will reflect git changes, but not
+        # any info in chg database, we should fix this...
         chunk_id = store.record_chunk((old_hash, chunk, new_hash))
         store.record_dialogue((chunk_id, answered))
 
@@ -90,9 +110,10 @@ def get_ui(args):
 
 
 def get_searcher(args):
+    root_dir = git_platform.root()
     searcher = EmbeddedSearcher(
-        chg.defaults.CHG_PROJ_FASTTEXT,
-        chg.defaults.CHG_PROJ_FAISS,
+        os.path.join(root_dir, chg.defaults.CHG_PROJ_FASTTEXT),
+        os.path.join(root_dir, chg.defaults.CHG_PROJ_FAISS),
     )
     return searcher
 
