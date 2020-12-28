@@ -9,23 +9,15 @@ Run
 make
 ```
 
-and make sure to export the following environment variable
+and make sure to add the following to your PATH variable
 
 ```
-export CHG_ROOT_DIR=$(pwd)
+export PATH=${PATH}:$(realpath bin/)
 ```
 
 from `changestructor`'s source root folder.
 
 You may want to add this environment variable to your usual dot files.
-
-
-Whenever you want to use `changestructor` you need to activate it's conda
-environment (which we used to avoid clobbering other installs).
-
-```
-conda activate changestructor-env
-```
 
 
 # Annotate
@@ -44,6 +36,7 @@ chg ask
 ```
 
 will bring up the (very simple) CLI for question asking.
+You can exit with standard ctrl+c or ctrl+d.
 
 
 # Build from an existing git repo
@@ -65,7 +58,7 @@ chg-to-index
 
 creates a queryable index.
 
-# Some chg details
+# Some `chg` details
 * Much like git, chg creates a folder (`.chg`) in the same location as
 corresponding `.git` folder.
 * The `.chg` folder contains:
@@ -82,8 +75,6 @@ corresponding `.git` folder.
 * `build.sh` installs necessary software etc, user interacts with it only through `make`
 * `chg/` is the root package directory. The idea of the structure here is to be somewhat
 self explanatory.
-
-
 
 
 # TODOs
