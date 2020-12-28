@@ -131,31 +131,42 @@ def get_args():
     parser = ArgumentParser(
         description="Semantic search based on embedded queries"
     )
-    # TODO: write proper subparses
-    parser.add_argument(
-        "action", choices=["text", "build", "query"], help="Actions"
-    )
-    parser.add_argument(
+    subparsers = parser.add_subparsers(help="Semantic search actions")
+
+    text_parser = subparsers.add_parser("text")
+    text_parser.set_defaults(action="text")
+
+    build_parser = subparsers.add_parser("build")
+    build_parser.set_defaults(action="build")
+    build_parser.add_argument(
         "--vectors",
         type=str,
         help="Path to file with vectors",
     )
-    parser.add_argument(
+    build_parser.add_argument(
         "--index",
         type=str,
         help="Path to store FAISS index",
     )
-    parser.add_argument(
+
+    query_parser = subparsers.add_parser("query")
+    query_parser.set_defaults(action="query")
+    query_parser.add_argument(
         "--model",
         type=str,
         help="Path to fasttext embedding model",
     )
-    parser.add_argument(
+    query_parser.add_argument(
+        "--index",
+        type=str,
+        help="Path to FAISS index",
+    )
+    query_parser.add_argument(
         "--query",
         type=str,
         help="Query to search with",
     )
-    parser.add_argument(
+    query_parser.add_argument(
         "--k",
         type=int,
         help="Number of records to return for query",
