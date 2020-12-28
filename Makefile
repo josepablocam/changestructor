@@ -2,8 +2,10 @@
 
 
 all:
-	bash build.sh
+	bash install.sh
 
+pip:
+	bash install.sh --pip
 
 clean:
-	rm -rf resources/
+	bash uninstall.sh
