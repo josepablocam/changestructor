@@ -78,6 +78,12 @@ self explanatory.
 
 
 # TODOs
+* Make sure the git wrapper handles standard things without issues: (Jose)
+  - adding new files
+  - removing files
+  - renaming files
+  - modifying existing file
+  - wrap these up in a proper test suite
 * Tkinter UI (Jose)
   - Nicer UI, but not browser based
 * curses UI
