@@ -89,12 +89,6 @@ conda activate ${CHG_CONDA_ENV}
 
 
 # TODOs
-* Make sure the git wrapper handles standard things without issues: (Jose)
-  - adding new files
-  - removing files
-  - renaming files
-  - modifying existing file
-  - wrap these up in a proper test suite
 * Tkinter UI (Jose)
   - Nicer UI, but not browser based
 * curses UI
@@ -105,4 +99,3 @@ conda activate ${CHG_CONDA_ENV}
 * Real annotator
   - We can start with template based questions for now, but will want to improve here at some point.
 * Debug FAISS lookups (really slow right now for some reason)
-*

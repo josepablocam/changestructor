@@ -51,7 +51,7 @@ pip install pytest
 # install changestructor
 pip install -e .
 
-# run test
+# run tests
 pytest
 
 chmod +x bin/chg
