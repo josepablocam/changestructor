@@ -13,78 +13,6 @@ from chg.ui import (
     simple_cli_ui,
 )
 
-DEBUG = False
-
-
-def annotate(chunker, store, annotator, ui, platform):
-    for chunk in chunker.get_chunks():
-        # show chunk to user initially
-        ui.display_chunk(chunk)
-        # annotater gets access to chunk
-        # so can produce relevant questions
-        annotator.consume_chunk(chunk)
-
-        answered = []
-        while not annotator.done():
-            question = annotator.ask()
-            # annotator may want to update the display
-            # for the chunk based on the question
-            # (e.g. may want to highlight a portion of the chunk)
-            chunk_update = annotator.get_chunk_update()
-            ui.display_chunk_update(chunk_update)
-
-            ui.display_question(question)
-
-            answer = ui.prompt("")
-            # annotator can update its internal state
-            # based on answer (e.g. new question based on previous answer)
-            annotator.consume_answer(answer)
-            answered.append((question, answer))
-
-        # changes induced by the chunk (i.e. this diff)
-        # are committed directly by `chg` (i.e. the user
-        # no longer needs to interact with `git commit`)
-        old_hash = platform.hash()
-        # some annotators may want to generate the commit message
-        # directly from the user's dialogue
-        # rather than prompt user for explicit commit message
-        if annotator.has_commit_message():
-            # but user can always override
-            generate_msg = ui.prompt("Generate commit msg?", ["Y", "n"])
-            if generate_msg == "Y":
-                msg = annotator.get_commit_message()
-            else:
-                msg = ui.prompt("Commit message: ")
-        else:
-            msg = ui.prompt("Commit message: ")
-            # if user writes commit message, we should take that
-            # as more info for db
-            answered.append(("Commit message", msg))
-
-        # just for dev
-        if not DEBUG:
-            chunker.commit(msg)
-
-        new_hash = platform.hash()
-        # info is only stored in the database after the commit
-        # has taken place
-        # TODO: if the user exits or crashes before this
-        # the file system will reflect git changes, but not
-        # any info in chg database, we should fix this...
-        chunk_id = store.record_chunk((old_hash, chunk, new_hash))
-        store.record_dialogue((chunk_id, answered))
-
-
-def ask(ui, searcher, k=5):
-    try:
-        while True:
-            user_question = ui.prompt("Question: ")
-            results = searcher.search(user_question, k=k)
-            for r in results:
-                ui.display_search_result(r)
-    except (EOFError, KeyboardInterrupt):
-        return
-
 
 def get_chunker(args):
     if args.chunker == "single":
@@ -104,7 +32,7 @@ def get_annotator(args):
 
 def get_ui(args):
     if args.ui == "cli":
-        return simple_cli_ui.SimpleCLIUI()
+        return simple_cli_ui.SimpleCLIUI(debug=args.debug)
     else:
         raise ValueError("Unknown ui:", args.ui)
 
@@ -132,11 +60,6 @@ def get_args():
         help="UI for interaction",
         default="cli"
     )
-    parser.add_argument(
-        "--debug",
-        action="store_true",
-        help="Set debug flag",
-    )
 
     subparsers = parser.add_subparsers(help="chg actions")
 
@@ -158,6 +81,11 @@ def get_args():
         choices=["fixed"],
         default="fixed"
     )
+    annotate_parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Set debug flag",
+    )
 
     ask_parser = subparsers.add_parser("ask")
     ask_parser.set_defaults(action="ask", debug=False)
@@ -170,22 +98,22 @@ def main_annotate(args):
     store = get_store()
     annotator = get_annotator(args)
     ui = get_ui(args)
-    # only supporting git for now...
-    annotate(chunker, store, annotator, ui, platform=git_platform)
+    ui.annotate(
+        chunker,
+        store,
+        annotator,
+        git_platform,
+    )
 
 
 def main_ask(args):
     searcher = get_searcher(args)
     ui = get_ui(args)
-    ask(ui, searcher, k=5)
+    ui.ask(searcher, k=5)
 
 
 def main():
     args = get_args()
-
-    if args.debug:
-        global DEBUG
-        DEBUG = True
 
     if args.action == "annotate":
         main_annotate(args)
