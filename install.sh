@@ -46,10 +46,13 @@ export PATH=${PATH}:"${CHG_RESOURCES}"
 # install faiss
 conda install faiss-cpu -c pytorch
 
+pip install pytest
 
 # install changestructor
 pip install -e .
 
+# run test
+pytest
 
 chmod +x bin/chg
 chmod +x bin/chg-to-index

@@ -2,6 +2,20 @@ import subprocess
 import json
 
 
+def init():
+    cmd = ["git", "init"]
+    proc = subprocess.Popen(cmd)
+    proc.communicate()
+    return proc.returncode
+
+
+def add(paths):
+    cmd = ["git", "add"] + paths
+    proc = subprocess.Popen(cmd)
+    proc.communicate()
+    return proc.returncode
+
+
 def diff(path=None):
     # after user has run git add
     cmd = ["git", "diff", "--cached", "--color=always"]
@@ -51,7 +65,7 @@ def commit(msg, paths=None):
     cmd.extend(["-m", msg])
     proc = subprocess.Popen(cmd)
     proc.communicate()
-    assert proc.returncode == 0, "Failed to commit"
+    return proc.returncode
 
 
 def hash():

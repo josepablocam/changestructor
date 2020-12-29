@@ -77,6 +77,17 @@ corresponding `.git` folder.
 self explanatory.
 
 
+# Development
+If you want to make source changes, you will likely want to make you activate
+the corresponding conda environment (installed and built during `chg` installation)
+by running
+
+```
+source chg/scripts/defaults.sh
+conda activate ${CHG_CONDA_ENV}
+```
+
+
 # TODOs
 * Make sure the git wrapper handles standard things without issues: (Jose)
   - adding new files
