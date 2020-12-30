@@ -89,8 +89,6 @@ conda activate ${CHG_CONDA_ENV}
 
 
 # TODOs
-* Tkinter UI (Jose)
-  - Nicer UI, but not browser based
 * curses UI
   - CLI UI but nicer than the plain text stuff right now. I ran into some issues
   getting diff ASCII color espace sequences to work here, so punted for now
