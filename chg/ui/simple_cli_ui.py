@@ -6,9 +6,6 @@ class SimpleCLIUI(object):
     def display_chunk(self, chunk):
         print(chunk)
 
-    def display_chunk_update(self, chunk):
-        pass
-
     def display_question(self, question):
         print("Question: {}".format(question))
 
@@ -38,12 +35,6 @@ class SimpleCLIUI(object):
             answered = []
             while not annotator.done():
                 question = annotator.ask()
-                # annotator may want to update the display
-                # for the chunk based on the question
-                # (e.g. may want to highlight a portion of the chunk)
-                chunk_update = annotator.get_chunk_update()
-                self.display_chunk_update(chunk_update)
-
                 self.display_question(question)
 
                 answer = self.prompt("")
@@ -76,14 +67,14 @@ class SimpleCLIUI(object):
             if not self.debug:
                 chunker.commit(msg)
 
-            new_hash = platform.hash()
-            # info is only stored in the database after the commit
-            # has taken place
-            # TODO: if the user exits or crashes before this
-            # the file system will reflect git changes, but not
-            # any info in chg database, we should fix this...
-            chunk_id = store.record_chunk((old_hash, chunk, new_hash))
-            store.record_dialogue((chunk_id, answered))
+                new_hash = platform.hash()
+                # info is only stored in the database after the commit
+                # has taken place
+                # TODO: if the user exits or crashes before this
+                # the file system will reflect git changes, but not
+                # any info in chg database, we should fix this...
+                chunk_id = store.record_chunk((old_hash, chunk, new_hash))
+                store.record_dialogue((chunk_id, answered))
 
         def ask(self, searcher, k=5):
             try:
