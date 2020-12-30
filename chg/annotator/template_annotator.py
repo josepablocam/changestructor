@@ -5,7 +5,7 @@ class FixedListAnnotator(object):
         self._init_stack()
 
     def _init_stack(self):
-        self.question_stack = list(reversed(self.orig_questions))
+        self.question_stack = list(self.orig_questions)
 
     def consume_chunk(self, chunk):
         # copy questions to start again

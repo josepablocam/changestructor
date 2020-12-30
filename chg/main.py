@@ -11,6 +11,7 @@ import chg.defaults
 
 from chg.ui import (
     simple_cli_ui,
+    tk_ui,
 )
 
 
@@ -33,6 +34,8 @@ def get_annotator(args):
 def get_ui(args):
     if args.ui == "cli":
         return simple_cli_ui.SimpleCLIUI(debug=args.debug)
+    elif args.ui == "tk":
+        return tk_ui.TkUI(debug=args.debug)
     else:
         raise ValueError("Unknown ui:", args.ui)
 
@@ -56,7 +59,7 @@ def get_args():
         "-u",
         "--ui",
         type=str,
-        choices=["cli"],
+        choices=["cli", "tk"],
         help="UI for interaction",
         default="cli"
     )
