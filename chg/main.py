@@ -54,16 +54,6 @@ def get_args():
         description="chgstructor: dialogue-based change-set annotation",
         formatter_class=ArgumentDefaultsHelpFormatter
     )
-    # shared across actions
-    parser.add_argument(
-        "-u",
-        "--ui",
-        type=str,
-        choices=["cli", "tk"],
-        help="UI for interaction",
-        default="cli"
-    )
-
     subparsers = parser.add_subparsers(help="chg actions")
 
     annotate_parser = subparsers.add_parser("annotate")
@@ -89,9 +79,25 @@ def get_args():
         action="store_true",
         help="Set debug flag",
     )
+    annotate_parser.add_argument(
+        "-u",
+        "--ui",
+        type=str,
+        choices=["cli", "tk"],
+        help="UI for interaction",
+        default="tk"
+    )
 
     ask_parser = subparsers.add_parser("ask")
     ask_parser.set_defaults(action="ask", debug=False)
+    ask_parser.add_argument(
+        "-u",
+        "--ui",
+        type=str,
+        choices=["cli", "tk"],
+        help="UI for interaction",
+        default="tk"
+    )
 
     return parser.parse_args()
 
