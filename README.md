@@ -35,8 +35,7 @@ Similarly, within the same git repository subtree
 chg ask
 ```
 
-will bring up the (very simple) CLI for question asking.
-You can exit with standard ctrl+c or ctrl+d.
+will bring up the (very simple) UI for question asking.
 
 
 # Build from an existing git repo
@@ -93,7 +92,7 @@ conda activate ${CHG_CONDA_ENV}
   - CLI UI but nicer than the plain text stuff right now. I ran into some issues
   getting diff ASCII color espace sequences to work here, so punted for now
 * Browser UI
-  - This is the main UI (at least for demo), but haven't start anything here.
+  - This should become the main UI (at least for demo), but haven't start anything here.
 * Real annotator
   - We can start with template based questions for now, but will want to improve here at some point.
 * Debug FAISS lookups (really slow right now for some reason)
