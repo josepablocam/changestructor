@@ -172,12 +172,6 @@ class TkUI(object):
 
         self.txt_question = tk.Entry(master=self.frame_qa)
         self.txt_question.pack(side=tk.LEFT)
-        # self.txt_question.insert("1.0", "Search: ")
-        self.frame_code = tk.Frame(master=self.window)
-        self.frame_code.pack(fill=tk.BOTH)
-
-        self.txt_results = scrolledtext.ScrolledText(master=self.frame_code)
-        self.txt_results.pack(expand=True, fill=tk.BOTH)
 
         self.button_submit = tk.Button(
             master=self.frame_qa,
