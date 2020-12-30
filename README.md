@@ -96,3 +96,11 @@ conda activate ${CHG_CONDA_ENV}
 * Real annotator
   - We can start with template based questions for now, but will want to improve here at some point.
 * Debug FAISS lookups (really slow right now for some reason)
+
+
+# Ideas
+* For purposes of dialogue generation, we can source info (e.g. entity names) from:
+  - the modified code (i.e. the patch)
+  - the files modified (e.g. basic call graph -- can then ask questions about any
+    other functions with edge to the modified one, e.g. does this break function X?)
+  - repo issues/pull requests
