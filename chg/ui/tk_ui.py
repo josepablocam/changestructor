@@ -43,6 +43,7 @@ class TkUI(object):
 
         self.txt_code.tag_config("add", background="palegreen")
         self.txt_code.tag_config("remove", background="salmon")
+        self.txt_code.configure(state=tk.DISABLED)
 
         self.frame_qa = tk.Frame(master=self.window)
         self.frame_qa.pack(expand=True, fill=tk.BOTH)
@@ -51,7 +52,7 @@ class TkUI(object):
         self.frame_question.pack(expand=True, fill=tk.BOTH)
         self.txt_question = tk.Text(master=self.frame_question)
         self.txt_question.pack(expand=True, fill=tk.BOTH)
-        self.txt_question.insert("1.0", "Question")
+        self.txt_question.configure(state=tk.DISABLED)
 
         self.frame_control = tk.Frame(master=self.frame_qa)
         self.frame_control.pack(expand=True)
@@ -95,6 +96,7 @@ class TkUI(object):
         self.start()
 
     def display_chunk(self, chunk):
+        self.txt_code.configure(state=tk.NORMAL)
         self.txt_code.delete("1.0", tk.END)
         chunk = strip_ansi_colors(chunk)
         for ix, line in enumerate(chunk.split("\n")):
@@ -106,10 +108,13 @@ class TkUI(object):
                 start_tag = "{}.0".format(ix + 1)
                 end_tag = "{}.end".format(ix + 1)
                 self.txt_code.tag_add(tag_name, start_tag, end_tag)
+        self.txt_code.configure(state=tk.DISABLED)
 
     def display_question(self, question):
+        self.txt_question.configure(state=tk.NORMAL)
         self.txt_question.delete("1.0", tk.END)
         self.txt_question.insert("1.0", question)
+        self.txt_question.configure(state=tk.DISABLED)
 
     def next_chunk(self):
         if self.chunker_done():
@@ -186,6 +191,14 @@ class TkUI(object):
             command=self.quit,
         )
         self.button_quit.pack(side=tk.LEFT)
+
+        self.frame_results = tk.Frame(master=self.window)
+        self.frame_results.pack(fill=tk.BOTH)
+
+        self.txt_results = scrolledtext.ScrolledText(master=self.frame_results)
+        self.txt_results.pack(expand=True, fill=tk.BOTH)
+        self.txt_results.configure(state=tk.DISABLED)
+
         self.window.title("chg ask")
 
     def ask(self, searcher, k=5):
@@ -201,9 +214,11 @@ class TkUI(object):
         self.display_results(results)
 
     def display_results(self, results):
+        self.txt_results.configure(state=tk.NORMAL)
         for r in results:
             r_str = str(r)
             self.txt_results.insert(tk.END, r_str + "\n")
+        self.txt_results.configure(state=tk.DISABLED)
 
 
 if __name__ == "__main__":
