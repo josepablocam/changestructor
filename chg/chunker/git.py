@@ -1,3 +1,4 @@
+import sys
 from chg.platform import git
 
 
@@ -6,7 +7,8 @@ class SingleChunk(object):
         chunk = git.diff()
 
         if chunk is None:
-            raise Exception("Must run git add first")
+            print("Must run git add first")
+            sys.exit(1)
         self.chunks = [chunk]
 
     def get_chunks(self):
@@ -29,7 +31,8 @@ class FileBasedChunker(object):
         files_changed = git.diff_files()
 
         if len(files_changed) == 0:
-            raise Exception("Must run git add first")
+            print("Must run git add first")
+            sys.exit(1)
 
         for f in files_changed:
             chunk = git.diff(f)
