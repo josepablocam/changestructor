@@ -104,3 +104,73 @@ conda activate ${CHG_CONDA_ENV}
   - the files modified (e.g. basic call graph -- can then ask questions about any
     other functions with edge to the modified one, e.g. does this break function X?)
   - repo issues/pull requests
+
+
+# Optimization Idea
+* How do we judge if a commit message is good?
+  - It should be "reflective" of the code it is committing
+  - Let's define "reflective" as the ability of retrieving the changeset using
+  this commit message from a set of (changeset, commit message)
+
+* Concretely:
+  - Given a dataset of D = {(changeset, commit messages)},
+  a function F to compute similarity between a changeset and msg,
+  the current commit c and the accompanying commit message m,
+  maximize F(c, m) and minimize F(c' in D, m)
+
+* Practical options:
+  - Option 1: Binary outcome -> ensure we can retrieve c within the top K
+  commits when sorting commits based on their similarity with m
+  - Option 2: Ordinal -> minimize the rank of c (lower better) when sorting
+  commits based on their similarity with m
+  - Option 3: "Soft" variants of (1) and (2) -> randomly sample N negative examples (i.e.
+    N commits that are not c), and then use option (1) or (2)
+    - Much cheaper
+    - Can repeat N times given random sampling
+
+* Given this criteria, (assuming commit message derived from dialogue) we can no:
+  - Decide when to stop the bot dialogue:
+    - e.g. binary outcome: once satisfied
+    - e.g. ordinal outcome: after no improvement in rank
+  - Decide which questions to ask:
+    - Treat question template as multi-armed bandit
+    - Reward: improvement in similarity metric for message after the answer
+    to question is integrated into commit message
+    - Can use standard MAB to choose template to ask
+
+
+## Implementation needed
+### Templatized questions
+  * Create questions as templates with holes for program info (e.g. variables and functions) that need to be populated
+  * Questions for now can be served in fixed order
+  * Fill holes by enumerating questions with program info
+
+Need to:
+  - design templates that are useful
+  - implement program info retrieval
+  - implement template filling
+
+
+### Commit message generation
+  * Currently users write their commit message. But we have talked about
+  using dialogue to produce a commit message
+  * Simplest option: concatenate questions and answers and return as commit message
+
+Need to:
+  - minor change in current annotators (i.e. question/answering bot) to produce
+  concatenation
+
+
+### Scoring current commit message
+  * Compute similarity for commit message and changeset
+  * Choose one of the goals described above in optimization
+
+Need to:
+  - we can use the current "semantic search" (chg/search/embedded_search.py)
+  approach of using cosine similarity over an embedded version of message and changeset
+  - change the build_semantic_db.sh to include the changeset when computing embeddings
+  (simplest thing we could do: concatenate code changeset and natural language in single line)
+
+
+Once we have these, we can implement the stopping criteria and then MAB over templates
+for question generation.
