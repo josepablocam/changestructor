@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -eux
 export CHG_ROOT_DIR=$(pwd)
 source chg/scripts/defaults.sh
 
