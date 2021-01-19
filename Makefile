@@ -4,8 +4,8 @@
 all:
 	bash install.sh
 
-pip:
-	bash install.sh --pip
+docker:
+	docker build --network=host -t chg-container .
 
 clean:
 	bash uninstall.sh

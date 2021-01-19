@@ -24,7 +24,7 @@ class SimpleCLIUI(object):
             # prompt again
             self.prompt(msg, options=options)
 
-    def annotate(self, chunker, store, annotator, platform):
+    def annotate_helper(self, chunker, store, annotator, platform):
         for chunk in chunker.get_chunks():
             # show chunk to user initially
             self.display_chunk(chunk)
@@ -75,6 +75,12 @@ class SimpleCLIUI(object):
                 # any info in chg database, we should fix this...
                 chunk_id = store.record_chunk((old_hash, chunk, new_hash))
                 store.record_dialogue((chunk_id, answered))
+
+        def annotate(self, chunker, store, annotator, platform):
+            try:
+                self.annotate_helper()
+            except (EOFError, KeyboardInterrupt):
+                return
 
         def ask(self, searcher, k=5):
             try:

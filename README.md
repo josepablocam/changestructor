@@ -1,7 +1,31 @@
 # Project
 `changestructor` overview.
 
-# Setup
+# Docker setup
+The easiest way to get setup, for development, will be to use the
+provided docker container. You should install Docker, if you don't already
+have it on your machine.
+
+Once you have done so, you can call
+
+```
+make docker
+```
+
+to build the container.
+
+You can then launch the container with
+
+
+```
+docker run -it chg-container
+```
+
+and then just make sure to append `--ui cli` to both `chg annotate`
+and `chg ask`. (We have not yet setup propert X11 forwarding to use
+the Tkinter UI).
+
+# Standard Setup
 
 Run
 

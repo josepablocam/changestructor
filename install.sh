@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -eux
+set -ex
 export CHG_ROOT_DIR=$(pwd)
 source chg/scripts/defaults.sh
 mkdir -p ${CHG_RESOURCES}
@@ -12,7 +12,7 @@ function install_conda_if_needed() {
             && bash miniconda.sh -b \
             && rm -f miniconda.sh
 
-            export PATH=miniconda3/bin/:${PATH}
+            export PATH=~/miniconda3/bin/:${PATH}
             source ~/miniconda3/etc/profile.d/conda.sh
     fi
 }
