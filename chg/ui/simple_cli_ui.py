@@ -76,13 +76,13 @@ class SimpleCLIUI(object):
                 chunk_id = store.record_chunk((old_hash, chunk, new_hash))
                 store.record_dialogue((chunk_id, answered))
 
-        def annotate(self, chunker, store, annotator, platform):
+    def annotate(self, chunker, store, annotator, platform):
             try:
-                self.annotate_helper()
+                self.annotate_helper(chunker, store, annotator, platform)
             except (EOFError, KeyboardInterrupt):
                 return
 
-        def ask(self, searcher, k=5):
+    def ask(self, searcher, k=5):
             try:
                 while True:
                     user_question = self.prompt("Question: ")
