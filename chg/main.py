@@ -3,8 +3,8 @@ import os
 
 from chg.platform import git as git_platform
 from chg.chunker import git as git_chunker
-from chg.annotator.template_annotator import FixedListAnnotator
-from chg.dialogue import basic_dialogue
+from chg.annotator.template_annotator import FixedListAnnotator, DynamicListAnnotator
+from chg.dialogue import basic_dialogue, dynamic_dialogue
 from chg.db.database import get_store
 from chg.search.embedded_search import EmbeddedSearcher
 import chg.defaults
@@ -27,6 +27,8 @@ def get_chunker(args):
 def get_annotator(args):
     if args.annotator == "fixed":
         return FixedListAnnotator(basic_dialogue.QUESTIONS)
+    elif args.annotator == "dynamic":
+        return DynamicListAnnotator(dynamic_dialogue.QUESTIONS)
     else:
         raise ValueError("Unknown annotator:", args.annotator)
 
@@ -71,8 +73,8 @@ def get_args():
         "--annotator",
         type=str,
         help="Type of annotator",
-        choices=["fixed"],
-        default="fixed"
+        choices=["dynamic","fixed"],
+        default="dynamic"
     )
     annotate_parser.add_argument(
         "--debug",

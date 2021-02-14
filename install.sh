@@ -49,6 +49,9 @@ conda install faiss-cpu -c pytorch
 
 pip install pytest
 
+# install nltk
+pip install nltk
+
 # install changestructor
 pip install -e .
 
