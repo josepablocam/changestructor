@@ -1,3 +1,5 @@
+import pdb
+
 class FixedListAnnotator(object):
     def __init__(self, questions):
         self.orig_questions = list(questions)
@@ -61,6 +63,7 @@ class DynamicListAnnotator(object):
 
     def consume_answer(self, ans):
         # doesn't use answer in any way
+        import pdb; pdb.set_trace()
         pass
 
     def has_commit_message(self):
