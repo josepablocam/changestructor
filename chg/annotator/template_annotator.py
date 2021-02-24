@@ -63,7 +63,7 @@ class DynamicListAnnotator(object):
 
     def consume_answer(self, ans):
         # doesn't use answer in any way
-        import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
         pass
 
     def has_commit_message(self):

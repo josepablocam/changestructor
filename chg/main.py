@@ -17,7 +17,7 @@ from chg.ui import (
 
 def get_chunker(args):
     if args.chunker == "single":
-        return git_chunker.SingleChunk()
+        return git_chunker.SingleChunker()
     elif args.chunker == "file":
         return git_chunker.FileBasedChunker()
     else:
@@ -35,9 +35,9 @@ def get_annotator(args):
 
 def get_ui(args):
     if args.ui == "cli":
-        return simple_cli_ui.SimpleCLIUI(debug=args.debug)
+        return simple_cli_ui.SimpleCLIUI(dev=args.dev)
     elif args.ui == "tk":
-        return tk_ui.TkUI(debug=args.debug)
+        return tk_ui.TkUI(dev=args.dev)
     else:
         raise ValueError("Unknown ui:", args.ui)
 
@@ -77,9 +77,9 @@ def get_args():
         default="dynamic"
     )
     annotate_parser.add_argument(
-        "--debug",
+        "--dev",
         action="store_true",
-        help="Set debug flag",
+        help="Set dev flag",
     )
     annotate_parser.add_argument(
         "-u",

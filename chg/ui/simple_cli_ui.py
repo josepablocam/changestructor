@@ -1,6 +1,6 @@
 class SimpleCLIUI(object):
-    def __init__(self, prompt_marker=">", debug=False):
-        self.debug = debug
+    def __init__(self, prompt_marker=">", dev=False):
+        self.dev = dev
         self.prompt_marker = prompt_marker
 
     def display_chunk(self, chunk):
@@ -13,10 +13,10 @@ class SimpleCLIUI(object):
         print(result)
 
     def prompt(self, msg, options=None):
+        formatted_msg = "{} {} ".format(self.prompt_marker, msg)
         if options is not None:
-            msg = "{} [Options={}]".format(msg, options)
-        msg = "{} {}".format(self.prompt_marker, msg)
-        res = input(msg)
+            formatted_msg += "[Options={}] ".format(options)
+        res = input(formatted_msg)
         res = res.strip()
         if options is None or res in options:
             return res
@@ -28,6 +28,15 @@ class SimpleCLIUI(object):
         for chunk in chunker.get_chunks():
             # show chunk to user initially
             self.display_chunk(chunk)
+
+            answer = self.prompt("Stage?", ["Y", "n"])
+            if answer == "n":
+                # skip
+                continue
+
+            if not self.dev:
+                chunker.stage(chunk)
+
             # annotater gets access to chunk
             # so can produce relevant questions
             annotator.consume_chunk(chunk)
@@ -64,8 +73,8 @@ class SimpleCLIUI(object):
                 answered.append(("Commit message", msg))
 
             # just for dev
-            if not self.debug:
-                chunker.commit(msg)
+            if not self.dev:
+                chunker.commit(msg, chunk)
 
                 new_hash = platform.hash()
                 # info is only stored in the database after the commit
@@ -77,17 +86,17 @@ class SimpleCLIUI(object):
                 store.record_dialogue((chunk_id, answered))
 
     def annotate(self, chunker, store, annotator, platform):
-            try:
-                self.annotate_helper(chunker, store, annotator, platform)
-            except (EOFError, KeyboardInterrupt):
-                return
+        try:
+            self.annotate_helper(chunker, store, annotator, platform)
+        except (EOFError, KeyboardInterrupt):
+            return
 
     def ask(self, searcher, k=5):
-            try:
-                while True:
-                    user_question = self.prompt("Question: ")
-                    results = searcher.search(user_question, k=k)
-                    for r in results:
-                        self.display_search_result(r)
-            except (EOFError, KeyboardInterrupt):
-                return
+        try:
+            while True:
+                user_question = self.prompt("Question: ")
+                results = searcher.search(user_question, k=k)
+                for r in results:
+                    self.display_search_result(r)
+        except (EOFError, KeyboardInterrupt):
+            return

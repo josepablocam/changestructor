@@ -1,3 +1,4 @@
+import enum
 import subprocess
 import sys
 
@@ -12,14 +13,20 @@ def strip_ansi_colors(msg):
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
     )
-    output, _ = proc.communicate(str.encode(msg))
+    output, _ = proc.communicate(str.encode(str(msg)))
     return output.decode().strip()
 
 
+class AnnotationStates(enum.Enum):
+    STAGING = 0
+    DIALOGUE = 1
+    COMMIT = 2
+
+
 class TkUI(object):
-    def __init__(self, debug=False):
+    def __init__(self, dev=False):
         self.window = tk.Tk()
-        self.debug = debug
+        self.dev = dev
 
     def start(self):
         self.window.mainloop()
@@ -75,7 +82,7 @@ class TkUI(object):
         self.frame_user.pack(expand=True, fill=tk.BOTH)
         self.txt_user = tk.Text(master=self.frame_user)
         self.txt_user.pack(expand=True, fill=tk.BOTH)
-        self.txt_user.insert("1.0", "User code")
+        self.txt_user.insert("1.0", "Type here")
         self.window.title("chg annotate")
 
     def chunker_done(self):
@@ -88,6 +95,7 @@ class TkUI(object):
         self.annotator = annotator
         self.platform = platform
         self.answered = []
+        self.state = AnnotationStates.STAGING
         self.ready_to_commit = False
 
         self.setup_annotate_ui()
@@ -116,17 +124,51 @@ class TkUI(object):
         self.txt_question.insert("1.0", question)
         self.txt_question.configure(state=tk.DISABLED)
 
+    def fetch_question_answer(self):
+        question = self.txt_question.get("1.0", tk.END).strip()
+        answer = self.txt_user.get("1.0", tk.END).strip()
+        return question, answer
+
+    def prompt_staging(self):
+        # ask if staged
+        options = ["Y", "n"]
+        self.display_question("Stage this chunk? {}".format(options))
+
+    def consume_staging(self):
+        # ask if staged
+        options = ["Y", "n"]
+        _, answer = self.fetch_question_answer()
+        if answer not in options:
+            self.display_question(
+                "Please answer {}: Stage this chunk?".format(options)
+            )
+            return
+
+        if answer == "Y":
+            self.state = AnnotationStates.DIALOGUE
+            self.answered = []
+            if not self.dev:
+                self.chunker.stage(self.chunks[0])
+            self.annotator.consume_chunk(self.chunks[0])
+            self.next_question()
+        else:
+            # remains same
+            self.state = AnnotationStates.STAGING
+            # but prompt next chunk
+            self.chunks.pop(0)
+            self.next_chunk()
+
     def next_chunk(self):
         if self.chunker_done():
             self.quit()
 
-        chunk = self.chunks.pop()
+        chunk = self.chunks[0]
         self.display_chunk(chunk)
-        # initialize for new qa
-        self.answered = []
+        self.prompt_staging()
+        self.state = AnnotationStates.STAGING
 
-        self.annotator.consume_chunk(chunk)
-        self.next_question()
+    def clear_user_text(self):
+        self.txt_user.delete("1.0", tk.END)
 
     def next_question(self):
         if not self.annotator.done():
@@ -135,34 +177,35 @@ class TkUI(object):
         else:
             # done with qa and should move to commit
             self.display_question("Commit message:")
-            self.ready_to_commit = True
-        self.txt_user.delete("1.0", tk.END)
+            self.state = AnnotationStates.COMMIT
 
     def consume_answer(self, get_next_question=True):
-        question = self.txt_question.get("1.0", tk.END).strip()
-        answer = self.txt_user.get("1.0", tk.END).strip()
-
-        self.annotator.consume_answer(answer)
-        self.answered.append((question, answer))
-
-        if self.ready_to_commit:
-            self.commit_chunk(answer)
-        else:
+        if self.state == AnnotationStates.STAGING:
+            self.consume_staging()
+        elif self.state == AnnotationStates.DIALOGUE:
+            question, answer = self.fetch_question_answer()
+            self.annotator.consume_answer(answer)
+            self.answered.append((question, answer))
             self.next_question()
+        elif self.state == AnnotationStates.COMMIT:
+            self.commit_chunk()
+        else:
+            raise Exception("Unhandled state: {}".format(self.state))
+        self.clear_user_text()
 
-    def commit_chunk(self, commit_msg):
+    def commit_chunk(self):
+        _, commit_msg = self.fetch_question_answer()
         old_hash = self.platform.hash()
 
-        # just for dev
-        if not self.debug:
-            self.chunker.commit(commit_msg)
+        chunk = self.chunks.pop(0)
+        if not self.dev:
+            self.chunker.commit(chunk, commit_msg)
+            new_hash = self.platform.hash()
+            chunk = self.txt_code.get("1.0", tk.END)
+            chunk_id = self.store.record_chunk((old_hash, chunk, new_hash))
+            self.store.record_dialogue((chunk_id, self.answered))
 
-        new_hash = self.platform.hash()
-        chunk = self.txt_code.get("1.0", tk.END)
-        chunk_id = self.store.record_chunk((old_hash, chunk, new_hash))
-        self.store.record_dialogue((chunk_id, self.answered))
-
-        self.ready_to_commit = False
+        self.state = AnnotationStates.STAGING
         self.next_chunk()
 
     def setup_ask_ui(self):

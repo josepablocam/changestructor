@@ -9,16 +9,19 @@ def init():
     return proc.returncode
 
 
-def add(paths):
-    cmd = ["git", "add"] + paths
+def add(paths=None):
+    if paths is not None:
+        cmd = ["git", "add"] + paths
+    else:
+        cmd = ["git", "add", "-u"]
     proc = subprocess.Popen(cmd)
     proc.communicate()
     return proc.returncode
 
 
 def diff(path=None):
-    # after user has run git add
-    cmd = ["git", "diff", "--cached", "--color=always"]
+    # get both cached (already staged) and uncached changes (i.e. not staged)
+    cmd = ["git", "diff", "HEAD", "--color=always"]
     if path is not None:
         cmd.append(path)
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
@@ -45,7 +48,7 @@ def diff_from_to(hash1, hash2):
 def diff_files():
     # after user has run git add
     proc = subprocess.Popen(
-        ["git", "diff", "--cached", "--name-only"],
+        ["git", "diff", "HEAD", "--name-only"],
         stdout=subprocess.PIPE,
     )
     output, _ = proc.communicate()
