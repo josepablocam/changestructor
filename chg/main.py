@@ -3,7 +3,10 @@ import os
 
 from chg.platform import git as git_platform
 from chg.chunker import git as git_chunker
-from chg.annotator.template_annotator import FixedListAnnotator, DynamicListAnnotator
+from chg.annotator.template_annotator import (
+    FixedListAnnotator,
+    DynamicListAnnotator,
+)
 from chg.dialogue import basic_dialogue, dynamic_dialogue
 from chg.db.database import get_store
 from chg.search.embedded_search import EmbeddedSearcher
@@ -73,7 +76,7 @@ def get_args():
         "--annotator",
         type=str,
         help="Type of annotator",
-        choices=["dynamic","fixed"],
+        choices=["dynamic", "fixed"],
         default="dynamic"
     )
     annotate_parser.add_argument(
@@ -133,6 +136,9 @@ def main():
     else:
         raise Exception("Invalid action", args.action)
 
+
+# this is a change
+# to see what's up
 
 if __name__ == "__main__":
     try:
