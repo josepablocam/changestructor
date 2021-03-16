@@ -52,8 +52,9 @@ pip install pytest
 # install nltk
 pip install nltk
 # install nltk resources
-python -c "import nltk; nltk.download('punkt')"
-python -c "import nltk; nltk.download('averaged_perceptron_tagger')"
+mkdir -p "${CHG_RESOURCES}/nltk_data"
+python -c "import nltk; nltk.download('punkt', download_dir='${CHG_RESOURCES}/nltk_data')"
+python -c "import nltk; nltk.download('averaged_perceptron_tagger', download_dir='${CHG_RESOURCES}/nltk_data')"
 
 pip install astunparse
 
