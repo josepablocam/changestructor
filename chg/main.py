@@ -103,6 +103,7 @@ def get_args():
         help="UI for interaction",
         default="tk"
     )
+    ask_parser.add_argument("--dev", action="store_true", help="Set dev flag")
 
     return parser.parse_args()
 
