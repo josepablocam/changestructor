@@ -103,8 +103,8 @@ class DynamicListAnnotator(object):
             verbs = [x for x, y in tagged_words if 'VB' in y]
             noun_template = "What is "
             verb_template = "How do you "
-            questions = [noun_template + noun + " ?" for noun in nouns]
-            questions += [verb_template + verb + " ?" for verb in verbs]
+            questions = [noun_template + noun + "?" for noun in nouns]
+            questions += [verb_template + verb + "?" for verb in verbs]
             self.question_stack = questions + self.question_stack
         else:
             pass
