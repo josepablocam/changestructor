@@ -2,6 +2,7 @@
 from argparse import ArgumentParser
 import subprocess
 
+import fasttext
 import faiss
 import numpy as np
 
@@ -67,20 +68,8 @@ def build_index(mat):
     return index
 
 
-def embed_query(model_path, query, model_suffix=".bin"):
-    if model_suffix is not None:
-        # annoying fasttext convention of adding a .bin to
-        # output files, despite not specifying it...
-        model_path = model_path + model_suffix
-    proc = subprocess.Popen(
-        ["fasttext", "print-sentence-vectors", model_path],
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-    stdout, _ = proc.communicate(input=str.encode(query))
-    vector_str = stdout.strip().decode()
-    return np.array([float(v) for v in vector_str.split()])
+def embed_query(model, query):
+    return model.get_sentence_vector(query)
 
 
 def load_index(index_path):
@@ -102,8 +91,15 @@ def lookup_in_store(store, ixs):
 
 
 class EmbeddedSearcher(object):
-    def __init__(self, fasttext_model, faiss_index):
-        self.fasttext_model = fasttext_model
+    def __init__(self, fasttext_model_path, faiss_index, model_suffix=".bin"):
+        if model_suffix is not None:
+            # annoying fasttext convention of adding a .bin to
+            # output files, despite not specifying it...
+            fasttext_model_path = fasttext_model_path + model_suffix
+        # silence warning
+        # https://github.com/facebookresearch/fastText/issues/1067
+        fasttext.FastText.eprint = lambda x: None
+        self.fasttext_model = fasttext.load_model(fasttext_model_path)
         self.store = get_store()
         self.faiss_index = load_index(faiss_index)
 
