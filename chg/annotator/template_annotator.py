@@ -1,5 +1,7 @@
 import random
 import pdb
+import nltk
+from nltk.tokenize import word_tokenize
 
 from chg.dialogue import analysis_dialogue
 from chg.analysis.py_analysis import PythonAnalysis
@@ -55,6 +57,7 @@ class DynamicListAnnotator(object):
         self.analyzers = analyzers
         self.num_analyzer_questions = num_analyzer_questions
         self._init_stack()
+        self.popped_question = ""
 
     def _init_stack(self):
         self.question_stack = list(self.orig_questions)
@@ -88,12 +91,23 @@ class DynamicListAnnotator(object):
         if self.done():
             return None
         else:
+            self.popped_question = self.question_stack[0]
             return self.question_stack.pop(0)
 
     def consume_answer(self, ans):
         # doesn't use answer in any way
-        # import pdb; pdb.set_trace()
-        pass
+        if self.popped_question in self.orig_questions:
+            tokenized_words = word_tokenize(ans)
+            tagged_words    = nltk.pos_tag(tokenized_words)
+            nouns = [x for x,y in tagged_words if 'NN' in y]
+            verbs = [x for x,y in tagged_words if 'VB' in y]
+            noun_template = "What is "
+            verb_template = "How do you "
+            questions = [noun_template + noun + " ?" for noun in nouns]
+            questions+= [verb_template + verb + " ?" for verb in verbs]
+            self.question_stack = questions + self.question_stack
+        else:
+            pass
 
     def has_commit_message(self):
         return False
