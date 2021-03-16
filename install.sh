@@ -51,6 +51,10 @@ pip install pytest
 
 # install nltk
 pip install nltk
+# install nltk resources
+python -c "import nltk; nltk.download('punkt')"
+python -c "import nltk; nltk.download('averaged_perceptron_tagger')"
+
 pip install astunparse
 
 # install changestructor
