@@ -51,6 +51,7 @@ pip install pytest
 
 # install nltk
 pip install nltk
+pip install astunparse
 
 # install changestructor
 pip install -e .
