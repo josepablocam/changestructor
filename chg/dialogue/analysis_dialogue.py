@@ -43,4 +43,4 @@ def get_questions(analysis):
     questions.extend(overlap_qs)
     questions.extend(new_entities_qs)
     questions.extend(removed_entities_qs)
-    return questions[:2]
+    return questions
