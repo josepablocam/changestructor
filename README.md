@@ -164,6 +164,9 @@ conda activate ${CHG_CONDA_ENV}
     to question is integrated into commit message
     - Can use standard MAB to choose template to ask
 
+## Related Work/ Motivation
+* https://people.csail.mit.edu/mjulia/publications/The_Challenges_of_Staying_Together_While_Moving_Fast_2016.pdf
+
 
 ## Implementation needed
 ### Templatized questions
