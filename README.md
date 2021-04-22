@@ -114,6 +114,7 @@ conda activate ${CHG_CONDA_ENV}
 
 
 # TODOs
+* Use https://github.com/vitsalis/pycg to statically create call graph use for further tempaltized term suggestions
 * curses UI
   - CLI UI but nicer than the plain text stuff right now. I ran into some issues
   getting diff ASCII color espace sequences to work here, so punted for now
