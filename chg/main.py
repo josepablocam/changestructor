@@ -1,4 +1,5 @@
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+import sys
 
 from chg.platform import git as git_platform
 from chg.chunker import git as git_chunker
@@ -99,7 +100,13 @@ def get_args():
     )
     ask_parser.add_argument("--dev", action="store_true", help="Set dev flag")
 
-    return parser.parse_args()
+    args = parser.parse_args()
+
+    if "action" not in args:
+        parser.print_help(sys.stdout)
+        sys.exit(0)
+
+    return args
 
 
 def main_annotate(args):
