@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 from argparse import ArgumentParser
+import os
 import subprocess
 
 import fasttext
 import faiss
 import numpy as np
 
+from chg.defaults import CHG_PROJ_FASTTEXT, CHG_PROJ_FAISS, CHG_PROJ_DB_VECTORS
 from chg.db.database import get_store
 
 
@@ -25,7 +27,7 @@ def database_to_text():
 
     chunks = {}
     chunk_stmt = """
-    SELECT id, chunk FROM Chunks
+    SELECT id, chunk FROM Chunks WHERE chunk is not NULL
     """
     for res in store.run_query(chunk_stmt):
         _id, chunk = res
@@ -42,21 +44,24 @@ def database_to_text():
     """
     for res in store.run_query(dialogue_stmt):
         _id, question, answer, chunk_id = res
-        chunk_str = chunks[chunk_id]
+        chunk_str = chunks.get(chunk_id, None)
+        if chunk_str is None:
+            continue
         entry_str = "{} {} {}".format(chunk_str, question, answer)
         text_repr.append(entry_str)
 
     return "\n".join(text_repr)
 
 
-def load_vectors(path):
-    return np.loadtxt(path, dtype=float)
+def load_vectors():
+    return np.loadtxt(CHG_PROJ_DB_VECTORS, dtype=float)
 
 
-def normalize_vectors(mat, eps=1e-6):
+def normalize_vectors(mat):
     # make vectors unit norm
-    # add epsilon for zero vectors avoid nan after division
-    norm = np.sqrt(np.sum(mat**2, axis=1)) + eps
+    norm = np.sqrt(np.sum(mat**2, axis=1))
+    # set to 1.0 to avoid nan
+    norm[norm == 0] = 1.0
     norm_mat = mat / norm.reshape(-1, 1)
     return norm_mat
 
@@ -72,8 +77,8 @@ def embed_query(model, query):
     return model.get_sentence_vector(query)
 
 
-def load_index(index_path):
-    return faiss.read_index(index_path)
+def load_index():
+    return faiss.read_index(CHG_PROJ_FAISS)
 
 
 def run_query(index, embedding, k):
@@ -91,17 +96,16 @@ def lookup_in_store(store, ixs):
 
 
 class EmbeddedSearcher(object):
-    def __init__(self, fasttext_model_path, faiss_index, model_suffix=".bin"):
-        if model_suffix is not None:
-            # annoying fasttext convention of adding a .bin to
-            # output files, despite not specifying it...
-            fasttext_model_path = fasttext_model_path + model_suffix
+    def __init__(self):
         # silence warning
         # https://github.com/facebookresearch/fastText/issues/1067
         fasttext.FastText.eprint = lambda x: None
+        fasttext_model_path = CHG_PROJ_FASTTEXT + ".bin"
+        if not os.path.exists(fasttext_model_path):
+            raise Exception("Must first run chg-to-index")
         self.fasttext_model = fasttext.load_model(fasttext_model_path)
         self.store = get_store()
-        self.faiss_index = load_index(faiss_index)
+        self.faiss_index = load_index()
 
     def search(self, query, k=5):
         vector = embed_query(self.fasttext_model, query)
@@ -112,14 +116,14 @@ class EmbeddedSearcher(object):
 
 def build(args):
     assert args.action == "build"
-    mat = load_vectors(args.vectors)
+    mat = load_vectors()
     index = build_index(mat)
-    faiss.write_index(index, args.index)
+    faiss.write_index(index, CHG_PROJ_FAISS)
 
 
 def query_from_cli(args):
     assert args.action == "query"
-    searcher = EmbeddedSearcher(args.model, args.index)
+    searcher = EmbeddedSearcher()
     return searcher.search(args.query, k=args.k)
 
 
@@ -134,29 +138,9 @@ def get_args():
 
     build_parser = subparsers.add_parser("build")
     build_parser.set_defaults(action="build")
-    build_parser.add_argument(
-        "--vectors",
-        type=str,
-        help="Path to file with vectors",
-    )
-    build_parser.add_argument(
-        "--index",
-        type=str,
-        help="Path to store FAISS index",
-    )
 
     query_parser = subparsers.add_parser("query")
     query_parser.set_defaults(action="query")
-    query_parser.add_argument(
-        "--model",
-        type=str,
-        help="Path to fasttext embedding model",
-    )
-    query_parser.add_argument(
-        "--index",
-        type=str,
-        help="Path to FAISS index",
-    )
     query_parser.add_argument(
         "--query",
         type=str,

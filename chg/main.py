@@ -1,5 +1,4 @@
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
-import os
 
 from chg.platform import git as git_platform
 from chg.chunker import git as git_chunker
@@ -10,7 +9,6 @@ from chg.annotator.template_annotator import (
 from chg.dialogue import basic_dialogue, dynamic_dialogue
 from chg.db.database import get_store
 from chg.search.embedded_search import EmbeddedSearcher
-import chg.defaults
 
 from chg.ui import (
     simple_cli_ui,
@@ -46,11 +44,7 @@ def get_ui(args):
 
 
 def get_searcher(args):
-    root_dir = git_platform.root()
-    searcher = EmbeddedSearcher(
-        os.path.join(root_dir, chg.defaults.CHG_PROJ_FASTTEXT),
-        os.path.join(root_dir, chg.defaults.CHG_PROJ_FAISS),
-    )
+    searcher = EmbeddedSearcher()
     return searcher
 
 

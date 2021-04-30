@@ -1,14 +1,23 @@
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+import os
 import sys
 
-CHG_PROJ_DIR = ".chg"
-CHG_PROJ_DB_PATH = ".chg/db.sqlite3"
+from chg.platform.git import root
+
+
+def chg_path(p):
+    return os.path.join(CHG_PROJ_DIR, p)
+
+
+CHG_PROJ_DIR = os.path.join(root(), ".chg")
+CHG_PROJ_DB_PATH = chg_path("db.sqlite3")
 
 # for semantic search
-CHG_PROJ_DB_TEXT = ".chg/db.txt"
-CHG_PROJ_DB_VECTORS = ".chg/db.vec"
-CHG_PROJ_FASTTEXT = ".chg/embeddings"
-CHG_PROJ_FAISS = ".chg/faiss.db"
+CHG_PROJ_DB_TEXT = chg_path("db.txt")
+CHG_PROJ_DB_VECTORS = chg_path("db.vec")
+CHG_PROJ_FASTTEXT = chg_path("embeddings")
+CHG_PROJ_FAISS = chg_path("faiss.db")
+CHG_PROJ_RANKER = chg_path("ranker.pkl")
 
 VARS = {
     "CHG_PROJ_DIR": CHG_PROJ_DIR,
@@ -17,6 +26,7 @@ VARS = {
     "CHG_PROJ_DB_VECTORS": CHG_PROJ_DB_VECTORS,
     "CHG_PROJ_FASTTEXT": CHG_PROJ_FASTTEXT,
     "CHG_PROJ_FAISS": CHG_PROJ_FAISS,
+    "CHG_PROJ_RANKER": CHG_PROJ_RANKER,
 }
 
 

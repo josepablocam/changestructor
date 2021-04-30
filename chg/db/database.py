@@ -1,7 +1,7 @@
 import os
 import sqlite3
 
-import chg.defaults
+from chg.defaults import CHG_PROJ_DB_PATH
 from chg.platform import git
 
 
@@ -123,13 +123,9 @@ class Database(object):
         return get_dialogue_by_ids(self.conn, ids)
 
 
-def get_store(db_path=None):
-    if db_path is None:
-        # get root of git project
-        proj_root = git.root()
-        db_path = os.path.join(proj_root, chg.defaults.CHG_PROJ_DB_PATH)
-    db_dir = os.path.dirname(db_path)
+def get_store():
+    db_dir = os.path.dirname(CHG_PROJ_DB_PATH)
     if not os.path.exists(db_dir):
         print("Creating folder for chg database at", db_dir)
         os.makedirs(db_dir)
-    return Database(db_path)
+    return Database(CHG_PROJ_DB_PATH)
