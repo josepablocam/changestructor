@@ -57,6 +57,7 @@ python -c "import nltk; nltk.download('punkt', download_dir='${CHG_RESOURCES}/nl
 python -c "import nltk; nltk.download('averaged_perceptron_tagger', download_dir='${CHG_RESOURCES}/nltk_data')"
 
 pip install astunparse
+pip install scikit-learn
 
 # install changestructor
 pip install -e .

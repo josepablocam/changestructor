@@ -81,7 +81,8 @@ builds `changestructor` database.
 chg-to-index
 ```
 
-creates a queryable index.
+creates a queryable index and trains a question ranker, as such
+you should run this step before you start using chg for dialogue.
 
 # Some `chg` details
 * Much like git, chg creates a folder (`.chg`) in the same location as
