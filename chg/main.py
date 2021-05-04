@@ -10,6 +10,7 @@ from chg.annotator.template_annotator import (
 from chg.dialogue import basic_dialogue, dynamic_dialogue
 from chg.db.database import get_store
 from chg.search.embedded_search import EmbeddedSearcher
+from chg.ranker.model_based_ranking import RFModel, QuestionRanker
 
 from chg.ui import (
     simple_cli_ui,

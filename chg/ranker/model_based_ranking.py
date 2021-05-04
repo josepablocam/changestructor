@@ -35,13 +35,15 @@ class QuestionRanker(object):
         fasttext_model_path = CHG_PROJ_FASTTEXT + ".bin"
         if not os.path.exists(fasttext_model_path):
             raise Exception("Must first run chg-to-index")
+        fasttext.FastText.eprint = lambda x: None
         self.fasttext_model = fasttext.load_model(CHG_PROJ_FASTTEXT + ".bin")
         self.loss_model = RFModel()
         self.database = database.get_store()
         self.curr = {}
-        self.delta = 0.05
+        self.delta = delta
         self.X = []
         self.y = []
+        self.train_every = train_every
         self.negative_k = negative_k
         self.step_ct = 0
 
@@ -49,32 +51,44 @@ class QuestionRanker(object):
         # by definition anything in DB is negative code
         # since we haven't committed this chunk
         query = """
-        SELECT chunk FROM Chunks ORDER BY RANDOM() LIMIT {}
+        SELECT chunk FROM Chunks WHERE chunk IS NOT NULL
+        ORDER BY RANDOM() LIMIT {}
         """.format(self.negative_k)
         results = []
         for chunk in self.database.run_query(query):
+            # comes out as a tuple by default, so take first elem
+            chunk = chunk[0]
             # remove color sequences
             processed_chunk = embedded_search.remove_color_ascii(chunk)
             # get rid of new lines in chunk, so we can treat all
             # as one line of text
-            processed_chunk = processed_chunk.replace("\n", " ")
             results.append(processed_chunk)
         return results
 
-    def embed_nl(self, s):
-        return self.fasttext_model.get_sentence_vector(s)
+    def embed_nl(self, txt):
+        lines = [
+            self.fasttext_model.get_sentence_vector(l)
+            for l in txt.split("\n")
+        ]
+        return np.mean(lines, axis=0)
 
-    def embed_code(self, s):
-        return self.fasttext_model.get_sentence_vector(s)
+    def embed_code(self, code):
+        # remove color annotations
+        code_no_color = embedded_search.remove_color_ascii(code)
+        lines = [
+            self.fasttext_model.get_sentence_vector(l)
+            for l in code_no_color.split("\n")
+        ]
+        return np.mean(lines, axis=0)
 
     def compute_loss(self, code_vec, nl_vec, neg_code_vecs):
-        # hinge_loss
         code_vec = embedded_search.normalize_vectors(code_vec.reshape(1, -1))
         neg_code_vecs = embedded_search.normalize_vectors(neg_code_vecs)
         nl_vec = embedded_search.normalize_vectors(nl_vec.reshape(1, -1)).T
 
         pos_sim = np.dot(code_vec, nl_vec)
         neg_sims = np.dot(neg_code_vecs, nl_vec)
+        # hinge loss w/ positive and negative pairs
         losses = self.delta - pos_sim + neg_sims
         losses[losses < 0] = 0.0
         mean_loss = np.mean(losses)
@@ -127,10 +141,12 @@ class QuestionRanker(object):
         best_i = None
         best_x = None
 
+        scores = []
         for i, q in enumerate(questions):
             q_vec = self.embed_nl(q)
             x = np.concatenate((context_vec, q_vec))
             y = self.loss_model.predict(x, curr_loss)
+            scores.append(y)
             if best_score is None or y > best_score:
                 best_score = y
                 best_x = x
@@ -141,7 +157,7 @@ class QuestionRanker(object):
             "neg_code_vecs": info["neg_code_vecs"],
             "x": best_x,
         }
-        return best_i
+        return best_i, best_score
 
     def fit_model(self, X=None, y=None):
         if X is None:
@@ -176,9 +192,6 @@ def build_ranker_from_git_log():
         _id, chunk = res
         # remove color sequences
         processed_chunk = embedded_search.remove_color_ascii(chunk)
-        # get rid of new lines in chunk, so we can treat all
-        # as one line of text
-        processed_chunk = processed_chunk.replace("\n", " ")
         chunks[_id] = processed_chunk
 
     dialogue_stmt = """
@@ -193,15 +206,21 @@ def build_ranker_from_git_log():
     ranker = QuestionRanker()
     X = []
     y = []
+    default_question = "what is this commit about?"
     chunk_ids = set(chunks.keys())
     for chunk_id in chunks.keys():
-        other_ids = list(chunk_ids.difference([chunk_id]))
-        negative_ids = np.random.choice(other_ids, ranker.negative_k)
         code = chunks[chunk_id]
-        negative_code = [chunks[_id] for _id in negative_ids]
         qa_hist = qa_history[chunk_id]
+        other_ids = list(chunk_ids.difference([chunk_id]))
+        negative_ids = np.random.choice(
+            other_ids, ranker.negative_k, replace=True
+        )
+        negative_code = [chunks[_id] for _id in negative_ids]
         info = ranker.get_features_and_curr_loss(code, qa_hist, negative_code)
-        X.append(info["context_vec"])
+        # assume the default question for git commit is the following
+        q_vec = ranker.embed_nl(default_question)
+        features = np.concatenate([info["context_vec"], q_vec])
+        X.append(features)
         y.append(info["curr_loss"])
     ranker.X = X
     ranker.y = y
@@ -218,6 +237,7 @@ def load_ranker():
     with open(CHG_PROJ_RANKER, "rb") as fin:
         ranker = pickle.load(fin)
         # can't pickle fasttext models or sqlite3 connections
+        fasttext.FastText.eprint = lambda x: None
         ranker.fasttext_model = fasttext.load_model(CHG_PROJ_FASTTEXT + ".bin")
         ranker.database = database.get_store()
     return ranker
@@ -240,6 +260,7 @@ def get_args():
 
 def main():
     args = get_args()
+    print("Building ranking model")
     ranker = build_ranker_from_git_log()
     store_ranker(ranker)
 

@@ -41,3 +41,6 @@ fasttext print-sentence-vectors "${CHG_PROJ_FASTTEXT}.bin" \
 # store the class vectors in FAISS
 # so we can perform fast searches
 python -m chg.search.embedded_search build
+
+# Build up ranker's model
+python -m chg.ranker.model_based_ranking
