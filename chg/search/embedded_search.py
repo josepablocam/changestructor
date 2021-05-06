@@ -1,25 +1,12 @@
 #!/usr/bin/env python3
 from argparse import ArgumentParser
-import os
-import subprocess
 
-import fasttext
 import faiss
 import numpy as np
 
-from chg.defaults import CHG_PROJ_FASTTEXT, CHG_PROJ_FAISS, CHG_PROJ_DB_VECTORS
+from chg.defaults import CHG_PROJ_FAISS, CHG_PROJ_DB_VECTORS
 from chg.db.database import get_store
-
-
-def remove_color_ascii(msg):
-    proc = subprocess.Popen(
-        "sed 's/\x1b\[[0-9;]*m//g'",
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        shell=True,
-    )
-    output, _ = proc.communicate(msg.encode())
-    return output.decode().strip()
+from chg.embed.basic import BasicEmbedder, remove_color_ascii
 
 
 def database_to_text():
@@ -74,7 +61,7 @@ def build_index(mat):
 
 
 def embed_query(model, query):
-    return model.get_sentence_vector(query)
+    return model.embed_nl(query)
 
 
 def load_index():
@@ -97,18 +84,12 @@ def lookup_in_store(store, ixs):
 
 class EmbeddedSearcher(object):
     def __init__(self):
-        # silence warning
-        # https://github.com/facebookresearch/fastText/issues/1067
-        fasttext.FastText.eprint = lambda x: None
-        fasttext_model_path = CHG_PROJ_FASTTEXT + ".bin"
-        if not os.path.exists(fasttext_model_path):
-            raise Exception("Must first run chg-to-index")
-        self.fasttext_model = fasttext.load_model(fasttext_model_path)
+        self.embed_model = BasicEmbedder()
         self.store = get_store()
         self.faiss_index = load_index()
 
     def search(self, query, k=5):
-        vector = embed_query(self.fasttext_model, query)
+        vector = embed_query(self.embed_model, query)
         assert k > 0
         ixs = run_query(self.faiss_index, vector, k)
         return lookup_in_store(self.store, ixs)

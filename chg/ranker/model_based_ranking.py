@@ -11,6 +11,7 @@ from scipy.stats import norm
 from chg.db import database
 from chg.defaults import CHG_PROJ_FASTTEXT, CHG_PROJ_RANKER
 from chg.search import embedded_search
+from chg.embed.basic import BasicEmbedder, remove_color_ascii
 
 
 class RFModel(object):
@@ -32,11 +33,7 @@ class RFModel(object):
 
 class QuestionRanker(object):
     def __init__(self, delta=0.05, train_every=1, negative_k=3):
-        fasttext_model_path = CHG_PROJ_FASTTEXT + ".bin"
-        if not os.path.exists(fasttext_model_path):
-            raise Exception("Must first run chg-to-index")
-        fasttext.FastText.eprint = lambda x: None
-        self.fasttext_model = fasttext.load_model(CHG_PROJ_FASTTEXT + ".bin")
+        self.embed_model = BasicEmbedder()
         self.loss_model = RFModel()
         self.database = database.get_store()
         self.curr = {}
@@ -65,22 +62,6 @@ class QuestionRanker(object):
             results.append(processed_chunk)
         return results
 
-    def embed_nl(self, txt):
-        lines = [
-            self.fasttext_model.get_sentence_vector(l)
-            for l in txt.split("\n")
-        ]
-        return np.mean(lines, axis=0)
-
-    def embed_code(self, code):
-        # remove color annotations
-        code_no_color = embedded_search.remove_color_ascii(code)
-        lines = [
-            self.fasttext_model.get_sentence_vector(l)
-            for l in code_no_color.split("\n")
-        ]
-        return np.mean(lines, axis=0)
-
     def compute_loss(self, code_vec, nl_vec, neg_code_vecs):
         code_vec = embedded_search.normalize_vectors(code_vec.reshape(1, -1))
         neg_code_vecs = embedded_search.normalize_vectors(neg_code_vecs)
@@ -99,6 +80,12 @@ class QuestionRanker(object):
             "{}:{}".format(q, a) for q, a in qa_history
         ])
         return qa_history_str
+
+    def embed_nl(self, _input):
+        return self.embed_model.embed_nl(_input)
+
+    def embed_code(self, _input):
+        return self.embed_model.embed_code(_input)
 
     def get_features_and_curr_loss(
         self, code, qa_history, negative_examples=None
@@ -191,7 +178,7 @@ def build_ranker_from_git_log():
     for res in db.run_query(chunk_stmt):
         _id, chunk = res
         # remove color sequences
-        processed_chunk = embedded_search.remove_color_ascii(chunk)
+        processed_chunk = remove_color_ascii(chunk)
         chunks[_id] = processed_chunk
 
     dialogue_stmt = """
@@ -236,9 +223,8 @@ def load_ranker():
 
     with open(CHG_PROJ_RANKER, "rb") as fin:
         ranker = pickle.load(fin)
-        # can't pickle fasttext models or sqlite3 connections
-        fasttext.FastText.eprint = lambda x: None
-        ranker.fasttext_model = fasttext.load_model(CHG_PROJ_FASTTEXT + ".bin")
+        # skip pickling of model or sqlite3 connections
+        ranker.embed_model = BasicEmbedder()
         ranker.database = database.get_store()
     return ranker
 
@@ -246,7 +232,7 @@ def load_ranker():
 def store_ranker(ranker):
     with open(CHG_PROJ_RANKER, "wb") as fout:
         # can't pickle fasttext or sqlite3
-        ranker.fasttext_model = None
+        ranker.embed_model = None
         ranker.database = None
         pickle.dump(ranker, fout)
 

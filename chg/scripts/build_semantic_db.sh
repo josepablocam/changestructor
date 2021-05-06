@@ -24,19 +24,8 @@ NDIM=150
 # Chg database to "text"
 python -m chg.search.embedded_search text > ${CHG_PROJ_DB_TEXT}
 
-
-# Create embeddings
-fasttext cbow \
-  -input ${CHG_PROJ_DB_TEXT} \
-  -output ${CHG_PROJ_FASTTEXT} \
-  -dim ${NDIM}
-
-
 # Embed chg's database
-fasttext print-sentence-vectors "${CHG_PROJ_FASTTEXT}.bin" \
-  < ${CHG_PROJ_DB_TEXT} \
-  > ${CHG_PROJ_DB_VECTORS}
-
+python -m chg.embed.basic --input ${CHG_PROJ_DB_TEXT} --output ${CHG_PROJ_DB_VECTORS}
 
 # store the class vectors in FAISS
 # so we can perform fast searches

@@ -43,6 +43,11 @@ popd
 ln -s "${CHG_RESOURCES}/fasttext-install/fasttext" "${CHG_RESOURCES}/fasttext"
 export PATH=${PATH}:"${CHG_RESOURCES}"
 
+# using codebert instead of fasttext
+# https://github.com/microsoft/CodeBERT
+pip install torch
+pip install transformers
+
 
 # install faiss
 conda install faiss-cpu -c pytorch
