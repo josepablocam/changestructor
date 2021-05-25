@@ -3,17 +3,21 @@ from argparse import ArgumentParser
 import os
 import pickle
 
-import fasttext
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import cross_validate
 from scipy.stats import norm
+import tqdm
 
 from chg.db import database
-from chg.defaults import CHG_PROJ_FASTTEXT, CHG_PROJ_RANKER
+from chg.defaults import CHG_PROJ_RANKER
 from chg.search import embedded_search
 from chg.embed.basic import BasicEmbedder, remove_color_ascii
 
 
+# TODO: we could replace this RF model
+# with a NN, and use that to tune the
+# CodeBERT embeddings as well
 class RFModel(object):
     def __init__(self):
         self.model = RandomForestRegressor()
@@ -21,10 +25,12 @@ class RFModel(object):
     def fit(self, X, y):
         self.model.fit(X, y)
 
-    def predict(self, x, curr_loss):
-        # predict expected improvement
+    def predict(self, x):
+        return self.model.predict(x)
+
+    def expected_improvement(self, x, curr_loss=None):
         x = x.reshape(1, -1)
-        mean = self.model.predict(x)[0]
+        mean = self.predict(x)[0]
         std = np.std([tree.predict(x)[0] for tree in self.model.estimators_])
         z = (curr_loss - mean) / std
         ei = (curr_loss - mean) * norm.cdf(z) + std * norm.pdf(z)
@@ -44,28 +50,27 @@ class QuestionRanker(object):
         self.negative_k = negative_k
         self.step_ct = 0
 
-    def sample_negative_code(self):
-        # by definition anything in DB is negative code
-        # since we haven't committed this chunk
+    def sample_negative_code_vecs(self, exclude_id=None):
         query = """
-        SELECT chunk FROM Chunks WHERE chunk IS NOT NULL
-        ORDER BY RANDOM() LIMIT {}
-        """.format(self.negative_k)
+        SELECT code_embedding FROM Embeddings
+        """
+        if exclude_id is not None:
+            query += " WHERE NOT chunk_id={}".format(exclude_id)
+        # sample some number of these
+        query += "  ORDER BY RANDOM() LIMIT {}".format(self.negative_k)
+
         results = []
-        for chunk in self.database.run_query(query):
+        for row in self.database.run_query(query):
             # comes out as a tuple by default, so take first elem
-            chunk = chunk[0]
-            # remove color sequences
-            processed_chunk = embedded_search.remove_color_ascii(chunk)
-            # get rid of new lines in chunk, so we can treat all
-            # as one line of text
-            results.append(processed_chunk)
-        return results
+            code_blob = row[0]
+            code_embedding = self.database.blob_to_array(code_blob)
+            results.append(code_embedding)
+        mat = np.vstack(results)
+        return mat
 
     def compute_loss(self, code_vec, nl_vec, neg_code_vecs):
-        code_vec = embedded_search.normalize_vectors(code_vec.reshape(1, -1))
-        neg_code_vecs = embedded_search.normalize_vectors(neg_code_vecs)
-        nl_vec = embedded_search.normalize_vectors(nl_vec.reshape(1, -1)).T
+        code_vec = code_vec.reshape(1, -1)
+        nl_vec = nl_vec.reshape(1, -1).T
 
         pos_sim = np.dot(code_vec, nl_vec)
         neg_sims = np.dot(neg_code_vecs, nl_vec)
@@ -75,37 +80,42 @@ class QuestionRanker(object):
         mean_loss = np.mean(losses)
         return mean_loss
 
-    def history_to_str(self, qa_history):
-        qa_history_str = " ".join([
-            "{}:{}".format(q, a) for q, a in qa_history
-        ])
-        return qa_history_str
-
     def embed_nl(self, _input):
         return self.embed_model.embed_nl(_input)
+
+    def embed_dialogue(self, _input):
+        return self.embed_model.embed_dialogue(_input)
 
     def embed_code(self, _input):
         return self.embed_model.embed_code(_input)
 
     def get_features_and_curr_loss(
-        self, code, qa_history, negative_examples=None
+        self,
+        code,
+        dialogue,
+        negative_examples=None,
+        embed_code=True,
+        embed_dialogue=True
     ):
-        code_vec = self.embed_code(code)
+        if embed_code:
+            code_vec = self.embed_code(code)
+        else:
+            code_vec = code
 
-        qa_history_str = self.history_to_str(qa_history)
-        hist_vec = self.embed_nl(qa_history_str)
+        if embed_dialogue:
+            nl_vec = self.embed_dialogue(dialogue)
+        else:
+            nl_vec = dialogue
 
         if negative_examples is None:
-            negative_examples = self.sample_negative_code()
-
-        neg_code_vecs = np.array([
-            self.embed_code(c) for c in negative_examples
-        ])
+            neg_code_vecs = self.sample_negative_code_vecs()
+        else:
+            neg_code_vecs = negative_examples
 
         flat_neg_code_vecs = neg_code_vecs.flatten()
-        context_vec = np.concatenate([code_vec, hist_vec, flat_neg_code_vecs])
+        context_vec = np.concatenate([code_vec, nl_vec, flat_neg_code_vecs])
         # hinge loss based on current dialogue for this chunk
-        curr_loss = self.compute_loss(code_vec, hist_vec, neg_code_vecs)
+        curr_loss = self.compute_loss(code_vec, nl_vec, neg_code_vecs)
         result = {
             "code_vec": code_vec,
             "neg_code_vecs": neg_code_vecs,
@@ -114,14 +124,18 @@ class QuestionRanker(object):
         }
         return result
 
-    def predict(self, code, qa_history, questions):
+    def predict(self, code, dialogue, questions):
         info = self.get_features_and_curr_loss(
             code,
-            qa_history,
+            dialogue,
             negative_examples=None,
         )
 
+        # context corresponds to code embedding,
+        # embedded dialogue up to this point
+        # and negative code embeddings sampled
         context_vec = info["context_vec"]
+        # ranking loss
         curr_loss = info["curr_loss"]
 
         best_score = None
@@ -129,16 +143,22 @@ class QuestionRanker(object):
         best_x = None
 
         scores = []
+        # candidate questions: pick the one that
+        # we believe will produce the best score
         for i, q in enumerate(questions):
             q_vec = self.embed_nl(q)
             x = np.concatenate((context_vec, q_vec))
-            y = self.loss_model.predict(x, curr_loss)
+            y = self.loss_model.expected_improvement(x, curr_loss)
             scores.append(y)
+            # larger expected improvement than previous best
             if best_score is None or y > best_score:
                 best_score = y
                 best_x = x
                 best_i = i
 
+        # keep around some state
+        # so we can compute realized loss later on
+        # (after user types out answer to proposed question)
         self.curr = {
             "code_vec": info["code_vec"],
             "neg_code_vecs": info["neg_code_vecs"],
@@ -146,72 +166,84 @@ class QuestionRanker(object):
         }
         return best_i, best_score
 
-    def fit_model(self, X=None, y=None):
+    def fit_model(self, X=None, y=None, cv=None):
         if X is None:
             X = self.X
         if y is None:
             y = self.y
+        if cv is not None:
+            metric = "r2"
+            cv_results = cross_validate(
+                self.loss_model.model,
+                X,
+                y,
+                cv=cv,
+                scoring=metric,
+            )
+            scores = cv_results["test_score"]
+            print("{}-fold CV".format(cv))
+            print(
+                "Mean {} (sd): {:.2f} ({:.2f})".format(
+                    metric, scores.mean(), scores.std()
+                )
+            )
         self.loss_model.fit(X, y)
 
-    def update(self, code, qa_history):
-        nl_vec = self.embed_nl(self.history_to_str(qa_history))
+    def update(self, code, dialogue):
+        # not doing anything with code right now
+        # embed full dialogue (including answer to latest
+        # proposed question)
+        nl_vec = self.embed_dialogue(dialogue)
+        # compute *realized* loss
         real_loss = self.compute_loss(
             self.curr["code_vec"],
             nl_vec,
             self.curr["neg_code_vecs"],
         )
-        self.X.append(self.curr["x"])
-        self.y.append(real_loss)
+        # add observations to training data
+        self.X = np.vstack((self.X, self.curr["x"]))
+        self.y = np.append(self.y, real_loss)
         self.step_ct += 1
         if (self.train_every > 0) and self.step_ct % self.train_every == 0:
             self.fit_model()
 
 
 def build_ranker_from_git_log():
-    db = database.get_store()
-
-    chunks = {}
-    qa_history = {}
-    chunk_stmt = """
-    SELECT id, chunk FROM Chunks where chunk is not NULL
-    """
-    for res in db.run_query(chunk_stmt):
-        _id, chunk = res
-        # remove color sequences
-        processed_chunk = remove_color_ascii(chunk)
-        chunks[_id] = processed_chunk
-
-    dialogue_stmt = """
-    SELECT question, answer, chunk_id FROM Dialogue
-    """
-    for res in db.run_query(dialogue_stmt):
-        question, answer, chunk_id = res
-        if chunk_id not in qa_history:
-            qa_history[chunk_id] = []
-        qa_history[chunk_id].append((question, answer))
-
+    store = database.get_store()
     ranker = QuestionRanker()
     X = []
     y = []
-    default_question = "what is this commit about?"
-    chunk_ids = set(chunks.keys())
-    for chunk_id in chunks.keys():
-        code = chunks[chunk_id]
-        qa_hist = qa_history[chunk_id]
-        other_ids = list(chunk_ids.difference([chunk_id]))
-        negative_ids = np.random.choice(
-            other_ids, ranker.negative_k, replace=True
+    rows = store.run_query("SELECT id FROM Chunks WHERE chunk IS NOT NULL")
+    chunk_ids = [row[0] for row in rows]
+
+    default_question = "What is this commit about?"
+
+    print("Training ranker")
+    for chunk_id in tqdm.tqdm(chunk_ids):
+        code_embedding, nl_embedding = store.get_embeddings_by_chunk_id(
+            chunk_id
         )
-        negative_code = [chunks[_id] for _id in negative_ids]
-        info = ranker.get_features_and_curr_loss(code, qa_hist, negative_code)
+        negative_code_vecs = ranker.sample_negative_code_vecs(
+            exclude_id=chunk_id,
+        )
+        info = ranker.get_features_and_curr_loss(
+            code=code_embedding,
+            dialogue=nl_embedding,
+            negative_examples=negative_code_vecs,
+            embed_code=False,
+            embed_dialogue=False,
+        )
         # assume the default question for git commit is the following
         q_vec = ranker.embed_nl(default_question)
+        # add this embedded question to context
         features = np.concatenate([info["context_vec"], q_vec])
         X.append(features)
         y.append(info["curr_loss"])
+    X = np.vstack(X)
+    y = np.array(y)
     ranker.X = X
     ranker.y = y
-    ranker.fit_model()
+    ranker.fit_model(cv=5)
     return ranker
 
 
@@ -245,7 +277,7 @@ def get_args():
 
 
 def main():
-    args = get_args()
+    _ = get_args()
     print("Building ranking model")
     ranker = build_ranker_from_git_log()
     store_ranker(ranker)

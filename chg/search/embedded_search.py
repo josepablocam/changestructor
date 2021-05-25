@@ -4,53 +4,22 @@ from argparse import ArgumentParser
 import faiss
 import numpy as np
 
-from chg.defaults import CHG_PROJ_FAISS, CHG_PROJ_DB_VECTORS
+from chg.defaults import CHG_PROJ_FAISS
 from chg.db.database import get_store
-from chg.embed.basic import BasicEmbedder, remove_color_ascii
-
-
-def database_to_text():
-    store = get_store()
-
-    chunks = {}
-    chunk_stmt = """
-    SELECT id, chunk FROM Chunks WHERE chunk is not NULL
-    """
-    for res in store.run_query(chunk_stmt):
-        _id, chunk = res
-        # remove color sequences
-        processed_chunk = remove_color_ascii(chunk)
-        # get rid of new lines in chunk, so we can treat all
-        # as one line of text
-        processed_chunk = processed_chunk.replace("\n", " ")
-        chunks[_id] = processed_chunk
-
-    text_repr = []
-    dialogue_stmt = """
-    SELECT id, question, answer, chunk_id FROM Dialogue
-    """
-    for res in store.run_query(dialogue_stmt):
-        _id, question, answer, chunk_id = res
-        chunk_str = chunks.get(chunk_id, None)
-        if chunk_str is None:
-            continue
-        entry_str = "{} {} {}".format(chunk_str, question, answer)
-        text_repr.append(entry_str)
-
-    return "\n".join(text_repr)
+from chg.embed.basic import (
+    BasicEmbedder,
+    normalize_vectors,
+)
 
 
 def load_vectors():
-    return np.loadtxt(CHG_PROJ_DB_VECTORS, dtype=float)
-
-
-def normalize_vectors(mat):
-    # make vectors unit norm
-    norm = np.sqrt(np.sum(mat**2, axis=1))
-    # set to 1.0 to avoid nan
-    norm[norm == 0] = 1.0
-    norm_mat = mat / norm.reshape(-1, 1)
-    return norm_mat
+    store = get_store()
+    rows = store.run_query(
+        "SELECT code_embedding FROM Embeddings ORDER BY chunk_id"
+    )
+    code_embeddings = [store.blob_to_array(row[0]) for row in rows]
+    mat = np.array(code_embeddings, dtype=np.float32)
+    return mat
 
 
 def build_index(mat):
@@ -114,9 +83,6 @@ def get_args():
     )
     subparsers = parser.add_subparsers(help="Semantic search actions")
 
-    text_parser = subparsers.add_parser("text")
-    text_parser.set_defaults(action="text")
-
     build_parser = subparsers.add_parser("build")
     build_parser.set_defaults(action="build")
 
@@ -133,14 +99,13 @@ def get_args():
         help="Number of records to return for query",
         default=5,
     )
+    parser.set_defaults(action="build")
     return parser.parse_args()
 
 
 def main():
     args = get_args()
-    if args.action == "text":
-        print(database_to_text())
-    elif args.action == "build":
+    if args.action == "build":
         build(args)
     elif args.action == "query":
         query_from_cli(args)

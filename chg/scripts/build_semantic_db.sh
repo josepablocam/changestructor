@@ -17,19 +17,15 @@ mkdir -p ${CHG_PROJ_DIR}
 # # per-project paths
 CHG_PROJ_DB_TEXT="$(python -m chg.defaults 'CHG_PROJ_DB_TEXT')"
 CHG_PROJ_DB_VECTORS="$(python -m chg.defaults 'CHG_PROJ_DB_VECTORS')"
-CHG_PROJ_FASTTEXT="$(python -m chg.defaults 'CHG_PROJ_FASTTEXT')"
+# CHG_PROJ_FASTTEXT="$(python -m chg.defaults 'CHG_PROJ_FASTTEXT')"
 CHG_PROJ_FAISS="$(python -m chg.defaults 'CHG_PROJ_FAISS')"
 NDIM=150
 
-# Chg database to "text"
-python -m chg.search.embedded_search text > ${CHG_PROJ_DB_TEXT}
-
 # Embed chg's database
-python -m chg.embed.basic --input ${CHG_PROJ_DB_TEXT} --output ${CHG_PROJ_DB_VECTORS}
+python -m chg.embed.basic
 
-# store the class vectors in FAISS
-# so we can perform fast searches
-python -m chg.search.embedded_search build
+# Load embeddings into FAISS for fast search
+python -m chg.search.embedded_search
 
 # Build up ranker's model
 python -m chg.ranker.model_based_ranking

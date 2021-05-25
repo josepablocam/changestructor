@@ -48,7 +48,7 @@ class DynamicListAnnotator(object):
         self,
         questions,
         analyzers=None,
-        num_analyzer_questions=4,
+        max_num_questions=4,
         optimize_question=True,
     ):
         self.orig_questions = list(questions)
@@ -57,7 +57,8 @@ class DynamicListAnnotator(object):
             # default analyzers
             analyzers = [PythonAnalysis]
         self.analyzers = analyzers
-        self.num_analyzer_questions = num_analyzer_questions
+        self.max_num_questions = max_num_questions
+        self.curr_num_questions = 0
         self.optimize_question = optimize_question
         if self.optimize_question:
             self.history = []
@@ -69,6 +70,7 @@ class DynamicListAnnotator(object):
         self.question_stack = list(self.orig_questions)
         if self.optimize_question:
             self.history = []
+        self.curr_num_questions = 0
 
     def consume_chunk(self, chunk):
         # copy questions to start again
@@ -83,22 +85,16 @@ class DynamicListAnnotator(object):
                     analysis_result
                 )
                 analyzer_questions.extend(new_questions)
-        if not self.optimize_question:
-            # randomly sample from analyzer questions -- otherwise too many
-            random.shuffle(analyzer_questions)
-            sampled_questions = analyzer_questions[:self.
-                                                   num_analyzer_questions]
-            self.question_stack.extend(sampled_questions)
-        else:
-            # add all, and let ranker worry about this
-            self.question_stack.extend(analyzer_questions)
+        self.question_stack.extend(analyzer_questions)
 
     def get_chunk_update(self):
         # no updates based on chunk
         return None
 
     def done(self):
-        return len(self.question_stack) == 0
+        no_questions = len(self.question_stack) == 0
+        hit_limit = self.curr_num_questions == self.max_num_questions
+        return no_questions or hit_limit
 
     def ask(self):
         if self.done():
@@ -117,6 +113,9 @@ class DynamicListAnnotator(object):
                 return self.question_stack.pop(best_i)
 
     def consume_answer(self, ans):
+        # user answered another question
+        self.curr_num_questions += 1
+
         if self.optimize_question:
             # track history
             self.history.append((self.popped_question, ans))
