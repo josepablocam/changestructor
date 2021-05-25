@@ -156,7 +156,3 @@ Need to:
   * Currently users write their commit message. But we have talked about
   using dialogue to produce a commit message
   * Simplest option: concatenate questions and answers and return as commit message
-
-Need to:
-  - minor change in current annotators (i.e. question/answering bot) to produce
-  concatenation
