@@ -30,24 +30,10 @@ conda activate ${CHG_CONDA_ENV}
 # install some utilities
 pip install tqdm
 
-# install fasttext
-# we'll use this to create embeddings for our classes
-wget https://github.com/facebookresearch/fastText/archive/v0.9.2.zip
-unzip v0.9.2.zip
-mv fastText-0.9.2 "${CHG_RESOURCES}/fasttext-install"
-rm v0.9.2.zip
-pushd "${CHG_RESOURCES}/fasttext-install"
-make
-pip install .
-popd
-ln -s "${CHG_RESOURCES}/fasttext-install/fasttext" "${CHG_RESOURCES}/fasttext"
-export PATH=${PATH}:"${CHG_RESOURCES}"
-
-# using codebert instead of fasttext
+# using codebert to embed changes and dialogue
 # https://github.com/microsoft/CodeBERT
 pip install torch
 pip install transformers
-
 
 # install faiss
 conda install faiss-cpu -c pytorch

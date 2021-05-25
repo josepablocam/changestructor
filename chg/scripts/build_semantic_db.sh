@@ -15,11 +15,7 @@ CHG_PROJ_DIR="$(python -m chg.defaults 'CHG_PROJ_DIR')"
 mkdir -p ${CHG_PROJ_DIR}
 
 # # per-project paths
-CHG_PROJ_DB_TEXT="$(python -m chg.defaults 'CHG_PROJ_DB_TEXT')"
-CHG_PROJ_DB_VECTORS="$(python -m chg.defaults 'CHG_PROJ_DB_VECTORS')"
-# CHG_PROJ_FASTTEXT="$(python -m chg.defaults 'CHG_PROJ_FASTTEXT')"
 CHG_PROJ_FAISS="$(python -m chg.defaults 'CHG_PROJ_FAISS')"
-NDIM=150
 
 # Embed chg's database
 python -m chg.embed.basic
