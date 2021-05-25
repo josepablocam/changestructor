@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from chg.platform import git
-from chg.main import get_store
+from chg.db.database import get_store
 
 import tqdm
 
@@ -24,6 +24,8 @@ def log_to_db(store):
         answer = curr_commit["subject"] + curr_commit["body"]
         answered = [(question, answer)]
 
+        # TODO: include
+        # code and dialogue embeddings
         chunk_id = store.record_chunk((old_hash, chunk, new_hash))
         store.record_dialogue((chunk_id, answered))
 

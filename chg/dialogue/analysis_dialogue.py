@@ -34,6 +34,14 @@ def get_removed_entities_questions(analysis):
     return questions
 
 
+def get_call_graph_questions(analysis):
+    # TODO: Use PyCG
+    # https://conf.researchr.org/details/icse-2021/icse-2021-papers/39/PyCG-Practical-Call-Graph-Generation-in-Python
+    # Idea: build CG, identify location where change was made
+    # identify callers/callees that may need to know about this change
+    raise NotImplementedError()
+
+
 def get_questions(analysis):
     questions = []
     overlap_qs = get_overlapping_context_questions(analysis)
