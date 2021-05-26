@@ -30,10 +30,12 @@ class RFModel(object):
 
     def expected_improvement(self, x, curr_loss=None):
         x = x.reshape(1, -1)
-        mean = self.predict(x)[0]
-        std = np.std([tree.predict(x)[0] for tree in self.model.estimators_])
-        z = (curr_loss - mean) / std
-        ei = (curr_loss - mean) * norm.cdf(z) + std * norm.pdf(z)
+        pred_mean = self.predict(x)[0]
+        pred_std = np.std([
+            tree.predict(x)[0] for tree in self.model.estimators_
+        ])
+        z = (curr_loss - pred_mean) / pred_std
+        ei = (curr_loss - pred_mean) * norm.cdf(z) + pred_std * norm.pdf(z)
         return ei
 
 
@@ -216,29 +218,43 @@ def build_ranker_from_git_log():
     rows = store.run_query("SELECT id FROM Chunks WHERE chunk IS NOT NULL")
     chunk_ids = [row[0] for row in rows]
 
-    default_question = "What is this commit about?"
-
     print("Training ranker")
     for chunk_id in tqdm.tqdm(chunk_ids):
-        code_embedding, nl_embedding = store.get_embeddings_by_chunk_id(
-            chunk_id
+        code_embedding, _ = store.get_embeddings_by_chunk_id(chunk_id)
+        # q/a associated with this code chunk change
+        dialogue = store.run_query(
+            "SELECT question, answer FROM Dialogue WHERE chunk_id={}".
+            format(chunk_id)
         )
-        negative_code_vecs = ranker.sample_negative_code_vecs(
-            exclude_id=chunk_id,
-        )
-        info = ranker.get_features_and_curr_loss(
-            code=code_embedding,
-            dialogue=nl_embedding,
-            negative_examples=negative_code_vecs,
-            embed_code=False,
-            embed_dialogue=False,
-        )
-        # assume the default question for git commit is the following
-        q_vec = ranker.embed_nl(default_question)
-        # add this embedded question to context
-        features = np.concatenate([info["context_vec"], q_vec])
-        X.append(features)
-        y.append(info["curr_loss"])
+        for i, (current_q, future_answer) in enumerate(dialogue):
+            past_dialogue = dialogue[:i]
+            # sample negative code examples
+            negative_code_vecs = ranker.sample_negative_code_vecs(
+                exclude_id=chunk_id,
+            )
+            info = ranker.get_features_and_curr_loss(
+                code=code_embedding,
+                dialogue=past_dialogue,
+                negative_examples=negative_code_vecs,
+                embed_code=False,
+                embed_dialogue=True,
+            )
+            # embed the current question
+            current_q_vec = ranker.embed_nl(current_q)
+            # add this embedded question to context to create feature vec
+            features = np.concatenate([info["context_vec"], current_q_vec])
+
+            # realized loss once the answer is given
+            # our goal is to *predict* this loss based on the
+            # code, context, and question
+            full_dialogue_vec = ranker.embed_dialogue(dialogue[:(i + 1)])
+            realized_loss = ranker.compute_loss(
+                code_embedding,
+                full_dialogue_vec,
+                negative_code_vecs,
+            )
+            X.append(features)
+            y.append(realized_loss)
     X = np.vstack(X)
     y = np.array(y)
     ranker.X = X
