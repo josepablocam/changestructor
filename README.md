@@ -140,6 +140,11 @@ conda activate ${CHG_CONDA_ENV}
 ## Related Work/ Motivation
 * https://people.csail.mit.edu/mjulia/publications/The_Challenges_of_Staying_Together_While_Moving_Fast_2016.pdf
 
+## FAQ
+We keep a FAQ at https://docs.google.com/document/d/1drCEYYsPs5rCX4BFfU2Px1txLg8FqKNE-Pk4dGINd1A/edit?usp=sharing
+
+If you have the link, you have editing rights -- so please be careful and avoid sharing the link with people outside of the project (or share a readonly version).
+
 
 ## Implementation needed
 ### Templatized questions
